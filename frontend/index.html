@@ -155,6 +155,21 @@
   }
   .input-secret:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
 
+  /* Bouton d'installation PWA */
+  #install-banner {
+    display: none;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #ede9fe;
+    margin-top: 20px;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideUp 0.5s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
   /* Screen de chat */
   #chat-screen { display: none; height: 100vh; flex-direction: column; background: #fafafa; }
   #chat-screen.visible { display: flex; }
@@ -217,7 +232,9 @@
           />
           <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl pointer-events-none">🔑</span>
         </div>
-        <p class="text-xs text-gray-400 font-semibold mt-2 ml-1">Les 2 personnes doivent saisir le même secret</p>
+        <div class="flex flex-wrap gap-2 mt-3" id="history-tags">
+          <!-- Injecté par JS : tunnels récents -->
+        </div>
       </div>
 
       <button id="btn-establish" class="btn-tunnel" onclick="establishSecureTunnel()">
@@ -243,6 +260,12 @@
         <div class="color-dot" style="background:#f59e0b" onclick="setTheme('#f59e0b','#fbbf24','#fffbeb')" title="🌟 Or"></div>
         <div class="color-dot" style="background:#ff6b6b" onclick="setTheme('#ff6b6b','#ff8e8e','#fff0f0')" title="🧡 Corail"></div>
       </div>
+    </div>
+
+    <!-- Bouton Installation -->
+    <div id="install-banner" class="flex items-center gap-4">
+       <span class="text-xs font-bold text-gray-600">Installer MyEsther sur mon mobile ?</span>
+       <button onclick="installPWA()" class="bg-gray-100 px-4 py-2 rounded-xl text-brand text-xs font-black uppercase tracking-widest hover:bg-gray-200">Installer</button>
     </div>
 
     <!-- Sélecteur de langue -->
@@ -300,7 +323,12 @@
   </div>
 
   <!-- Zone de messages -->
-  <section id="chat-canvas" class="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+  <section id="chat-canvas" class="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+    <!-- Indicateur de frappe discret -->
+    <div id="typing-indicator" class="text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2">
+      Contact est en train d'écrire...
+    </div>
+    
     <!-- Message de bienvenue -->
     <div class="flex justify-center">
       <span class="text-xs font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-4 py-2 rounded-full conn-badge">
@@ -599,6 +627,25 @@
       }
       if (notifsEnabled) playNotifSound();
     };
+
+    // === PWA INSTALLATION ===
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('install-banner').style.display = 'flex';
+    });
+
+    async function installPWA() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('install-banner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+    }
 
     // Init
     buildEmojiPanel();

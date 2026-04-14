@@ -1,206 +1,280 @@
 /**
- * URYA NEURAL BRAIN
- * Core Cryptography Engine & WebSocket Controller
+ * URYA NEURAL BRAIN V2 - WebRTC & AES-GCM Edition
+ * High-Security Cryptography & P2P Communication
  */
 
-// 1. GÉNÉRATEUR DÉTERMINISTE (Indépendant de Math.random)
-// Utilise SHA-256 pour générer un flux d'octets pseudo-aléatoires à partir du mot de passe
-class DeterministicPRNG {
-    constructor(seedString) {
-        this.seedString = seedString;
-        this.counter = 0;
+// --- 1. MOTEUR CRYPTOGRAPHIQUE (WEB CRYPTO API) ---
+
+class URYACrypto {
+    constructor() {
+        this.key = null;
+        this.salt = new TextEncoder().encode("URYA_SALT_2026"); // Sel statique pour MyEsther
     }
 
-    async nextFloat() {
-        // Hache la seed + le compteur pour garantir un nombre unique cryptographiquement sûr
-        const data = new TextEncoder().encode(this.seedString + this.counter.toString());
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
+    // Dérivation de clé PBKDF2 (Grade Militaire)
+    async deriveKey(password) {
+        const passwordBuffer = new TextEncoder().encode(password);
+        const importedKey = await crypto.subtle.importKey(
+            'raw', passwordBuffer, { name: 'PBKDF2' }, false, ['deriveKey']
+        );
+
+        this.key = await crypto.subtle.deriveKey(
+            {
+                name: 'PBKDF2',
+                salt: this.salt,
+                iterations: 100000,
+                hash: 'SHA-256'
+            },
+            importedKey,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+        console.log("✅ [CRYPTO] Clé AES-256 dérivée avec succès.");
+    }
+
+    async encrypt(text) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const encodedText = new TextEncoder().encode(text);
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv: iv },
+            this.key,
+            encodedText
+        );
+
+        // On concatène IV + Ciphertext pour le transport
+        const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+        combined.set(iv);
+        combined.set(new Uint8Array(ciphertext), iv.length);
         
-        this.counter++;
-        
-        // Convertit les 4 premiers octets en float entre 0 et 1
-        let val = 0;
-        for(let i=0; i<4; i++) {
-            val += hashArray[i] * Math.pow(256, i);
+        // Retourne un tableau d'octets compatible avec Socket/WebRTC
+        return Array.from(combined);
+    }
+
+    async decrypt(combinedArray) {
+        try {
+            const combined = new Uint8Array(combinedArray);
+            const iv = combined.slice(0, 12);
+            const ciphertext = combined.slice(12);
+
+            const decryptedBuffer = await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: iv },
+                this.key,
+                ciphertext
+            );
+
+            return new TextDecoder().decode(decryptedBuffer);
+        } catch (e) {
+            console.error("❌ Échec du déchiffrement. Clé incorrecte ?");
+            return null;
         }
-        return val / 4294967295; // 2^32 - 1
     }
 }
 
-// 2. MOTEUR CRYPTOGRAPHIQUE TENSORFLOW.JS
-class URYATensorFlowCipher {
-    constructor(secret) {
-        this.secret = secret;
-        this.prng = new DeterministicPRNG(secret);
-        this.weights = [];
-        this.isReady = false;
-        this.blockSize = 256; 
+// --- 2. CONTRÔLEUR P2P (WebRTC) ---
+
+class URYAPeer {
+    constructor(onMessageCallback, onStatusCallback) {
+        this.pc = null;
+        this.dataChannel = null;
+        this.socket = null;
+        this.onMessage = onMessageCallback;
+        this.onStatus = onStatusCallback;
+        this.config = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
     }
 
-    async init() {
-        console.log("[URYA BRAIN] Initialisation de la matrice neuronale...");
-        
-        // On génère une matrice de poids de 256x256 (65 000 paramètres)
-        // en utilisant STRICTEMENT notre PRNG pour que Alice et Bob aient les MEMES poids.
-        for (let i = 0; i < this.blockSize * this.blockSize; i++) {
-            // Poids entre -1.0 et 1.0
-            const weight = ((await this.prng.nextFloat()) * 2) - 1;
-            this.weights.push(weight);
-        }
-        this.isReady = true;
-        console.log("✅ [URYA BRAIN] Cerveau Prêt. " + this.weights.length + " synapses forgées.");
-    }
+    init(socket) {
+        this.socket = socket;
+        this.pc = new RTCPeerConnection(this.config);
 
-    encryptBlock(blockBytes) {
-        // Opération de confusion matricielle simple inspirée du réseau de neurone
-        let encrypted = new Uint8Array(this.blockSize);
-        for(let i=0; i < this.blockSize; i++) {
-            let sum = 0;
-            for(let j=0; j < blockBytes.length; j++) {
-                sum += blockBytes[j] * this.weights[i * this.blockSize + j];
+        // Gestion des candidats ICE
+        this.pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                this.socket.emit('webrtc_signal', { type: 'candidate', candidate: event.candidate });
             }
-            // Activation XOR
-            encrypted[i] = (Math.floor(Math.abs(sum)) % 256) ^ blockBytes[i % blockBytes.length];
-        }
-        return encrypted;
+        };
+
+        // Réception du DataChannel (côté passif)
+        this.pc.ondatachannel = (event) => {
+            this.setupDataChannel(event.channel);
+        };
+
+        // Création du DataChannel (côté actif - appelé par Alice)
+        this.dataChannel = this.pc.createDataChannel("chat");
+        this.setupDataChannel(this.dataChannel);
     }
 
-    decryptBlock(encryptedBytes) {
-        // Dans une matrice réversible ou architecture hybride URYA
-        // C'est l'opération miroir. Exceptionnellement ici on simule la symétrie.
-        let decrypted = new Uint8Array(this.blockSize);
-        for(let i=0; i < this.blockSize; i++) {
-            let sum = 0;
-            // On reconstruit le bruit généré par les poids
-            for(let j=0; j < this.blockSize; j++) { // Approximation de la symétrie
-                // Note : L'algorithme python complet de URYA est plus complexe (AutoEncodeur).
-                // Cette implémentation PWA est une adaptation XOR-Matrix.
-            }
-            // XOR Inverse
-            let noise = Math.floor(Math.abs(this.weights[i] * 1000)) % 256;
-            decrypted[i] = encryptedBytes[i] ^ noise;
+    setupDataChannel(channel) {
+        this.dataChannel = channel;
+        channel.onopen = () => {
+            console.log("🚀 [WebRTC] Canal P2P Ouvert !");
+            this.onStatus("p2p-ready");
+        };
+        channel.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            this.onMessage(data);
+        };
+    }
+
+    async handleSignal(signal) {
+        if (signal.type === 'offer') {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(signal.offer));
+            const answer = await this.pc.createAnswer();
+            await this.pc.setLocalDescription(answer);
+            this.socket.emit('webrtc_signal', { type: 'answer', answer: answer });
+        } else if (signal.type === 'answer') {
+            await this.pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
+        } else if (signal.type === 'candidate') {
+            await this.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
         }
-        return decrypted;
+    }
+
+    async startP2P() {
+        const offer = await this.pc.createOffer();
+        await this.pc.setLocalDescription(offer);
+        this.socket.emit('webrtc_signal', { type: 'offer', offer: offer });
+    }
+
+    send(data) {
+        if (this.dataChannel && this.dataChannel.readyState === 'open') {
+            this.dataChannel.send(JSON.stringify(data));
+            return true;
+        }
+        return false;
     }
 }
 
-// 3. CONTRÔLEUR D'INTERFACE ET WEBSOCKETS
-let cipherEngine = null;
-let roomHash = "";
-let socket = null; // Instancié dynamiquement quand on se connecte
+// --- 3. LOGIQUE GLOBALE DE L'APPLICATION ---
+
+const cryptoEngine = new URYACrypto();
+let peerController = null;
+let socket = null;
+let currentSecret = "";
 
 async function establishSecureTunnel() {
-    const secretInput = document.querySelector('input[type="password"]').value;
-    if (!secretInput || secretInput.length < 4) {
-        alert("⚠️ Sécurité insuffisante. Tapez un mot de passe fort.");
+    currentSecret = document.getElementById('secret-input').value;
+    if (!currentSecret || currentSecret.length < 4) {
+        alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
         return;
     }
 
-    // A. Générer l'ID du Salon (Hachage SHA-256)
-    const data = new TextEncoder().encode(secretInput);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    roomHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 12);
+    // A. Dérivation de clé Haute Sécurité
+    await cryptoEngine.deriveKey(currentSecret);
 
-    // B. Initialiser le Cerveau
-    cipherEngine = new URYATensorFlowCipher(secretInput);
-    await cipherEngine.init();
-
-    // C. Connecter le Socket au Relai — WebSocket pur pour vitesse max
+    // B. Connexion Socket IO (Signaling)
     socket = io({ transports: ['websocket'] });
-    
+
     socket.on('connect', () => {
-        console.log('✅ Connecté au relai via WebSocket pur. Salon : ' + roomHash);
-        socket.emit('join_secure_channel', { shared_secret: secretInput });
+        socket.emit('join_secure_channel', { shared_secret: currentSecret });
         
-        // Déclencher la transition UI via l'event custom (compatible nouvelle UI)
+        // Initialiser le P2P
+        peerController = new URYAPeer(receivePayload, updateP2PStatus);
+        peerController.init(socket);
+        
+        // On tente de démarrer le P2P (Alice envoie l'offre)
+        peerController.startP2P();
+
+        // UI Transition
         document.dispatchEvent(new Event('myesther:connected'));
-        
-        // Fallback pour ancienne UI
-        if (document.getElementById('setup-screen').style.display !== 'none') {
-            document.getElementById('setup-screen').classList.add('hidden');
-            const chatScreen = document.getElementById('chat-screen');
-            chatScreen.classList.remove('hidden');
-            chatScreen.classList.add('visible');
-            setTimeout(() => {
-                const chatInput = document.querySelector('#chat-input');
-                if (chatInput) chatInput.focus();
-            }, 300);
-        }
+        saveToHistory(currentSecret);
+    });
+
+    socket.on('webrtc_signal', (data) => {
+        peerController.handleSignal(data);
     });
 
     socket.on('encrypted_payload', (data) => {
-        console.log("Message chiffré intercepté depuis le tunnel", data);
-        receiveMessage(data);
+        // Fallback si WebRTC n'est pas encore prêt
+        receivePayload({ type: 'msg', content: data });
     });
 }
 
-function sendSecureMessage() {
-    const inputField = document.querySelector('input[type="text"]');
-    const text = inputField.value;
-    if(!text) return;
-
-    // Simulate encryption for UI
-    const bytes = new TextEncoder().encode(text);
-    
-    // UI Update
-    appendMessage(text, 'sent');
-    
-    // Fake the sending array behavior
-    const fakeEncryptedArray = Array.from(bytes).map(b => b ^ 0x4A);
-    socket.emit('encrypted_payload', fakeEncryptedArray);
-
-    inputField.value = '';
-}
-
-function receiveMessage(encryptedArray) {
-    // Decrypting using the secret matrix logic
-    const receivedBytes = new Uint8Array(encryptedArray);
-    const decryptedBytes = receivedBytes.map(b => b ^ 0x4A); // Match the fake encryption for POC
-    const text = new TextDecoder().decode(decryptedBytes);
-    
-    // Déclencher la notification locale (son + alerte si onglet caché)
-    if (window.pushNotification) window.pushNotification(text);
-    
-    appendMessage(text, 'received');
-}
-
-function appendMessage(text, type) {
-    const chatCanvas = document.querySelector('section.flex-1');
-    const timeStr = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-    
-    let html = '';
-    if(type === 'sent') {
-        html = `
-        <div class="flex flex-col items-end self-end max-w-[80%] space-y-1 mt-4">
-            <div class="bg-primary-container/10 text-primary-fixed p-4 rounded-lg rounded-tr-none border border-primary/20 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
-                <p class="text-sm leading-relaxed">${text}</p>
-            </div>
-            <span class="text-[9px] uppercase text-zinc-600 mr-1">${timeStr}</span>
-        </div>`;
-    } else {
-        html = `
-        <div class="flex flex-col items-start max-w-[80%] space-y-1 mt-4">
-            <div class="bg-surface-container-low text-on-surface-variant p-4 rounded-lg rounded-tl-none relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-1 h-full bg-zinc-700"></div>
-                <p class="text-sm leading-relaxed">${text}</p>
-            </div>
-            <span class="text-[9px] uppercase text-zinc-600 ml-1">${timeStr}</span>
-        </div>`;
+function updateP2PStatus(status) {
+    const badge = document.querySelector('.conn-badge');
+    if(status === 'p2p-ready') {
+        badge.innerHTML = "⚡ Connexion P2P Directe Établie";
+        badge.classList.add('bg-green-100', 'text-green-600');
     }
-    
-    chatCanvas.insertAdjacentHTML('beforeend', html);
-    chatCanvas.scrollTop = chatCanvas.scrollHeight;
 }
 
-// Lier la touche "Entrée"
-document.addEventListener("DOMContentLoaded", () => {
-    const chatInput = document.querySelector('input[type="text"]');
-    if(chatInput) {
-        chatInput.addEventListener("keydown", (e) => {
-            if(e.key === "Enter") sendSecureMessage();
-        });
+async function sendSecureMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Chiffrement AES-GCM réel
+    const encryptedData = await cryptoEngine.encrypt(text);
+    
+    const payload = { type: 'msg', content: encryptedData };
+
+    // Tenter P2P, sinon fallback Socket
+    const sentP2P = peerController.send(payload);
+    if (!sentP2P) {
+        socket.emit('encrypted_payload', encryptedData);
+    }
+
+    appendMessage(text, 'sent');
+    input.value = '';
+}
+
+async function receivePayload(payload) {
+    if (payload.type === 'msg') {
+        const decryptedText = await cryptoEngine.decrypt(payload.content);
+        if (decryptedText) {
+            appendMessage(decryptedText, 'received');
+            if (window.pushNotification) window.pushNotification();
+        }
+    } else if (payload.type === 'typing') {
+        showTypingIndicator(payload.name);
+    }
+}
+
+// --- 4. UX & PERSISTENCE ---
+
+function saveToHistory(secret) {
+    let history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
+    if (!history.includes(secret)) {
+        history.push(secret);
+        if (history.length > 5) history.shift();
+        localStorage.setItem('myesther_history', JSON.stringify(history));
+    }
+}
+
+function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
+    const container = document.getElementById('history-tags');
+    if (!container) return;
+    
+    container.innerHTML = history.reverse().map(s => 
+        `<button onclick="document.getElementById('secret-input').value='${s}'; establishSecureTunnel()" class="bg-zinc-100 text-zinc-500 text-[10px] px-2 py-1 rounded hover:bg-brand hover:text-white transition-colors">${s.substring(0,6)}...</button>`
+    ).join(' ');
+}
+
+// Indicateur de frappe
+let typingTimeout = null;
+function notifyTyping() {
+    if (peerController) {
+        peerController.send({ type: 'typing', name: 'Contact' });
+    }
+}
+
+function showTypingIndicator(name) {
+    const bar = document.getElementById('typing-indicator');
+    bar.textContent = `${name} est en train d'écrire...`;
+    bar.classList.remove('opacity-0');
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        bar.classList.add('opacity-0');
+    }, 2000);
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', () => {
+    loadHistory();
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('input', notifyTyping);
     }
 });

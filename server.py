@@ -3,15 +3,19 @@ import hashlib
 from flask import Flask, request, send_from_directory
 from flask_socketio import SocketIO, join_room, emit
 
+import time
+
 # Dossier frontend (compatible local et cloud)
 # Render exécute depuis la racine du repo
 base_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dir = os.path.join(base_dir, 'frontend')
 
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
+# Mémoire amnésique du serveur
 active_users = {}
+rate_limit = {} # {sid: last_message_time}
 
 @app.route('/')
 def index():
@@ -74,16 +78,30 @@ def handle_join(data):
 @socketio.on('encrypted_payload')
 def handle_encrypted_message(payload_data):
     """
-    Le Cœur du relai aveugle. 
-    Reçoit un tableau d'octets chiffrés et l'envoie à tous (sauf l'expéditeur) dans le même salon.
+    Relai de secours pour les messages chiffrés (si le P2P échoue).
+    """
+    # Simple Rate Limiting manuel
+    now = time.time()
+    last_time = rate_limit.get(request.sid, 0)
+    if now - last_time < 0.1: # Max 10 messages par seconde
+        return
+    rate_limit[request.sid] = now
+
+    room_id = active_users.get(request.sid, {}).get('room')
+    if room_id:
+        emit('encrypted_payload', payload_data, room=room_id, include_self=False)
+
+@socketio.on('webrtc_signal')
+def handle_webrtc_signal(data):
+    """
+    Relai de Signalisation WebRTC (Indispensable pour le P2P).
+    Transmet les offres, réponses et candidats ICE entre les pairs.
     """
     room_id = active_users.get(request.sid, {}).get('room')
-    
     if room_id:
-        # Le serveur ne tente pas de lire le payload_data
-        # Il le balance simplement aux autres.
-        emit('encrypted_payload', payload_data, room=room_id, include_self=False)
-        print(f"📡 [Relai] Transfert d'une trame cryptée ({len(str(payload_data))} bytes) dans le salon {room_id}")
+        # On renvoie le signal à tout le monde dans le salon (sauf l'expéditeur)
+        emit('webrtc_signal', data, room=room_id, include_self=False)
+        print(f"📡 [Signaling] Relai de signal WebRTC dans le salon {room_id}")
 
 if __name__ == '__main__':
     # Mode silencieux, sans logs superflus
