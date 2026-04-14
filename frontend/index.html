@@ -268,6 +268,11 @@
   <!-- TopBar -->
   <header class="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
     <div class="flex items-center gap-3">
+      <!-- Bouton Retour -->
+      <button onclick="leaveSecureTunnel()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors mr-1" title="Quitter le Tunnel">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+      </button>
+      
       <div class="w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm border border-brand/20 text-brand" id="chat-avatar" style="background:#f5f3ff">
         <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
       </div>

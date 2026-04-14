@@ -196,6 +196,63 @@ async function establishSecureTunnel() {
     });
 }
 
+function leaveSecureTunnel() {
+    // 1. Fermer WebRTC P2P
+    if (peerController && peerController.pc) {
+        peerController.pc.close();
+    }
+    peerController = null;
+
+    // 2. Déconnecter du Socket
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+
+    currentSecret = "";
+    document.getElementById('secret-input').value = "";
+
+    // 3. Réinitialiser la zone de message (canvas)
+    const canvas = document.getElementById('chat-canvas');
+    if (canvas) {
+        canvas.innerHTML = `
+    <div id="typing-indicator" class="text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2">
+      Contact est en train d'écrire...
+    </div>
+    <div class="flex justify-center">
+      <span class="text-xs font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-4 py-2 rounded-full conn-badge">
+        Tunnel Sécurisé Etabli
+      </span>
+    </div>
+    <div class="flex flex-col items-start max-w-[82%] space-y-1">
+      <div class="bubble-recv px-5 py-3">
+        <p class="text-sm font-bold leading-relaxed">Bonjour ! Vous êtes connecté(e) en toute sécurité.</p>
+      </div>
+      <span class="text-[10px] text-gray-300 font-bold ml-1">Maintenant</span>
+    </div>
+        `;
+    }
+
+    // Restaurer le badge P2P d'origine
+    const badge = document.querySelector('.conn-badge');
+    if (badge) {
+        badge.innerHTML = "Tunnel Sécurisé Etabli";
+        badge.classList.remove('bg-green-100', 'text-green-600');
+    }
+
+    // Remettre le bouton
+    const btn = document.getElementById('btn-establish');
+    if (btn) {
+        btn.innerHTML = `<span id="btn-text">Etablir le Tunnel Sécurisé</span>`;
+        btn.disabled = false;
+        if (window.applyLanguage) window.applyLanguage();
+    }
+
+    // 4. Transitions UI
+    document.getElementById('chat-screen').classList.remove('visible');
+    document.getElementById('setup-screen').style.display = 'flex';
+}
+
 function updateP2PStatus(status) {
     const badge = document.querySelector('.conn-badge');
     if(status === 'p2p-ready') {
