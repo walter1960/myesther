@@ -1,370 +1,540 @@
 <!DOCTYPE html>
-
-<html lang="fr"><head>
+<html lang="fr">
+<head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>MyEsther</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>MyEsther 💬</title>
+<meta name="description" content="MyEsther - Chat Sécurisé Zéro-Connaissance"/>
 <link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#e08dff"/>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<meta name="theme-color" content="#7c3aed"/>
+
+<!-- Préchargement de la police pour vitesse maximale -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+
+<!-- Scripts chargés prioritairement -->
+<script src="https://cdn.tailwindcss.com?plugins=forms" defer></script>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script src="js/urya_brain.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "tertiary": "#8ff5ff",
-                        "secondary-fixed": "#e5e2e1",
-                        "surface-tint": "#e08dff",
-                        "secondary-container": "#474746",
-                        "primary-fixed-dim": "#d160ff",
-                        "on-secondary-fixed": "#403f3f",
-                        "on-primary-container": "#3d0055",
-                        "surface-variant": "#262627",
-                        "secondary-dim": "#d6d4d3",
-                        "tertiary-fixed-dim": "#00deec",
-                        "on-primary": "#4f006c",
-                        "surface-bright": "#2c2c2d",
-                        "error-container": "#a70138",
-                        "primary-fixed": "#d978ff",
-                        "on-secondary-container": "#d2d0cf",
-                        "on-secondary-fixed-variant": "#5c5b5b",
-                        "surface-container-highest": "#262627",
-                        "primary-container": "#d978ff",
-                        "surface-container": "#1a191b",
-                        "inverse-on-surface": "#565556",
-                        "tertiary-fixed": "#00eefc",
-                        "inverse-surface": "#fcf8f9",
-                        "surface-container-lowest": "#000000",
-                        "secondary-fixed-dim": "#d6d4d3",
-                        "primary-dim": "#bc00fb",
-                        "surface-dim": "#0e0e0f",
-                        "on-tertiary-fixed": "#003f43",
-                        "on-tertiary": "#005d63",
-                        "on-tertiary-container": "#005359",
-                        "on-error-container": "#ffb2b9",
-                        "on-tertiary-fixed-variant": "#005e64",
-                        "tertiary-dim": "#00deec",
-                        "on-error": "#490013",
-                        "surface-container-low": "#131314",
-                        "on-background": "#ffffff",
-                        "secondary": "#e5e2e1",
-                        "primary": "#e08dff",
-                        "on-surface-variant": "#adaaab",
-                        "outline-variant": "#484849",
-                        "surface": "#0e0e0f",
-                        "on-primary-fixed-variant": "#4c0068",
-                        "on-secondary": "#525151",
-                        "on-surface": "#ffffff",
-                        "background": "#0e0e0f",
-                        "error": "#ff6e84",
-                        "error-dim": "#d73357",
-                        "inverse-primary": "#9a00cf",
-                        "tertiary-container": "#00eefc",
-                        "surface-container-high": "#201f21",
-                        "on-primary-fixed": "#000000",
-                        "outline": "#767576"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
-                    "fontFamily": {
-                        "headline": ["Nunito"],
-                        "body": ["Nunito"],
-                        "label": ["Nunito"]
-                    }
-                },
-            },
-        }
-    </script>
-    <style>
-        body { font-family: 'Nunito', sans-serif; background-color: #ffffff; color: #1a1a1b; }
-        * { color: inherit; }
-        input, textarea { color: #1a1a1b !important; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); }
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .neon-glow:hover { box-shadow: 0 0 15px rgba(191, 0, 255, 0.2); }
-        .pulse-tertiary { box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(143, 245, 255, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0); } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f4f4f5; }
-        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
-    </style>
-<style>
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
-  </head>
-<body class="bg-white overflow-hidden text-zinc-900">
-<!-- SETUP SCREEN -->
-<main class="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" id="setup-screen">
-<!-- Background Asset -->
-<div class="fixed inset-0 z-[-1] opacity-30 pointer-events-none overflow-hidden">
-<div class="absolute top-1/4 -left-1/4 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px]"></div>
-<div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-tertiary/20 rounded-full blur-[120px]"></div>
-</div>
-<div class="w-full max-w-md space-y-12">
-<header class="text-center space-y-4">
-<div class="inline-block p-4 bg-zinc-100 rounded-3xl mb-4 shadow-xl border border-zinc-200">
-  <span class="text-6xl">💜</span>
-</div>
-<h1 class="text-5xl font-black text-zinc-900">MyEsther ✨</h1>
-<p class="text-zinc-500 text-sm font-bold" id="text-security">🔒 NIVEAU DE SÉCURITÉ : OMÉGA</p>
-</header>
-<section class="space-y-6">
-<div class="group">
-<label class="block text-sm font-bold text-zinc-700 mb-2 ml-1" id="text-secretlbl">🗝️ Secret Partagé</label>
-<div class="relative">
-<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-zinc-50 text-zinc-900 px-6 py-5 rounded-2xl border-2 border-zinc-100 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-zinc-400 text-lg font-bold shadow-sm" placeholder="Entrez votre clé secrète..." type="password"/>
-<span class="absolute right-5 top-1/2 -translate-y-1/2 text-2xl">🔑</span>
-</div>
-</div>
-<button id="btn-establish" class="w-full bg-gradient-to-br from-primary to-primary-dim text-white font-extrabold py-5 text-lg tracking-wide rounded-xl shadow-[0_0_25px_rgba(191,0,255,0.4)] hover:shadow-[0_0_40px_rgba(191,0,255,0.6)] transition-all duration-500 active:scale-95 flex items-center justify-center gap-3" onclick="establishSecureTunnel()">
-  🚀 ÉTABLIR LE TUNNEL SÉCURISÉ
-</button>
-</section>
-<footer class="pt-6 text-center space-y-4">
-<div class="flex justify-center gap-6 text-xs text-zinc-400 font-black tracking-widest uppercase">
-  <span>🛡️ AES-256</span>
-  <span>🌐 P2P MESH</span>
-  <span>🤫 NO-LOGS</span>
-</div>
-<!-- Panneau de personnalisation des thèmes -->
-<div class="mt-6 flex flex-col items-center">
-  <p class="text-zinc-400 text-[10px] font-black tracking-widest uppercase mb-4">🎨 Choisis ton ambiance</p>
-  <div class="flex justify-center gap-3" id="theme-picker">
-    <button onclick="setCustomTheme('violet')" class="theme-btn w-8 h-8 rounded-full bg-[#e08dff] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💜 Violet (Défaut)"></button>
-    <button onclick="setCustomTheme('green')" class="theme-btn w-8 h-8 rounded-full bg-[#00ff88] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💚 Vert Matrix"></button>
-    <button onclick="setCustomTheme('rose')" class="theme-btn w-8 h-8 rounded-full bg-[#ff6eb4] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="🌸 Rose Sakura"></button>
-    <button onclick="setCustomTheme('gold')" class="theme-btn w-8 h-8 rounded-full bg-[#ffd700] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="✨ Or Soleil"></button>
-    <button onclick="setCustomTheme('sky')" class="theme-btn w-8 h-8 rounded-full bg-[#38bdf8] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="🩵 Bleu Ciel"></button>
-  </div>
-</div>
-</footer>
-</div>
-</main>
-<!-- CHAT SCREEN (Hidden by default) -->
-<main class="hidden min-h-screen h-screen flex flex-col bg-surface" id="chat-screen">
-<!-- TopAppBar (From JSON Anchor) -->
-<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl flex justify-between items-center px-6 h-20 w-full border-b border-zinc-100">
-<div class="flex items-center gap-4">
-<div class="flex items-center gap-4">
-<div class="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-zinc-200">
-  <span>💬</span>
-</div>
-<div>
-<h2 class="text-base font-black text-zinc-900">MyEsther Chat</h2>
-<div class="flex items-center gap-1.5">
-<span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
-<span class="text-[10px] uppercase tracking-widest text-zinc-500 font-black">🔐 Chiffrement Neural Actif</span>
-</div>
-</div>
-</div>
-<div class="flex items-center gap-4">
-<button class="text-zinc-500 hover:text-fuchsia-300 transition-colors duration-300">
-<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
-</button>
-<button class="text-zinc-500 hover:text-fuchsia-300 transition-colors duration-300">
-<span class="material-symbols-outlined" data-icon="shield_lock">shield_lock</span>
-</button>
-<!-- LANGUAGE TOGGLE BUTTON -->
-<button onclick="toggleLanguage()" class="text-zinc-500 hover:text-primary transition-colors duration-300 ml-2" title="Switch Language EN/FR">
-<span id="lang-ind" class="text-xs font-bold border border-zinc-500 rounded px-1">FR</span>
-</button>
-<!-- THEME TOGGLE BUTTON -->
-<button onclick="toggleTheme()" class="text-zinc-500 hover:text-tertiary transition-colors duration-300 ml-2" title="Switch Theme">
-<span class="material-symbols-outlined" data-icon="palette">palette</span>
-</button>
-</div>
-</header>
-<!-- Chat Canvas -->
-<section class="flex-1 overflow-y-auto pt-24 pb-32 px-6 space-y-8">
-<!-- System Log -->
-<div class="flex justify-center">
-<span class="text-xs text-zinc-400 font-black tracking-widest uppercase bg-zinc-100 px-5 py-2.5 rounded-full">🤝 Tunnel Sécurisé Établi</span>
-</div>
-<!-- Received Message -->
-<div class="flex flex-col items-start max-w-[85%] space-y-1">
-<div class="bg-zinc-50 p-5 rounded-3xl rounded-tl-none border border-zinc-100 shadow-sm">
-<p class="text-sm leading-relaxed text-zinc-800 font-bold">Salut ! 👋 Tu es maintenant connecté(e) en toute sécurité. 😊</p>
-</div>
-<span class="text-[10px] text-zinc-300 font-bold ml-2">14:02:44</span>
-</div>
-<!-- Sent Message (Decryption Simulation logic) -->
-<div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
-<div class="bg-gradient-to-br from-primary to-primary-dim p-5 rounded-3xl rounded-tr-none shadow-lg shadow-primary/20">
-<p class="text-sm leading-relaxed text-white font-black">Génial ! Je suis là. On peut commencer 🔒✨</p>
-</div>
-<span class="text-[10px] text-zinc-300 font-bold mr-2">14:05:12</span>
-</div>
-<!-- Received Message -->
-<div class="flex flex-col items-start max-w-[85%] space-y-1">
-<div class="bg-zinc-50 p-5 rounded-3xl rounded-tl-none border border-zinc-100 shadow-sm">
-<p class="text-sm leading-relaxed text-zinc-800 font-bold">C'est parfait 😂🛡️ La connexion est crypographique et anonyme.</p>
-</div>
-<span class="text-[10px] text-zinc-300 font-bold ml-2">14:05:59</span>
-</div>
-<!-- Image Transmission -->
-<div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
-<div class="bg-surface-container-high p-1 rounded-lg border border-primary/10 overflow-hidden shadow-2xl">
-<img alt="Encrypted Image" class="rounded-lg grayscale opacity-70" data-alt="cyberpunk futuristic dark cityscape at night with neon purple and cyan lights reflecting on wet pavement and fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQICPcIYvm3UVy2qpHuW12U_OeI9fZeVS7nboHDC650sekFpVx0MEp3mTdx5Yh3QkjJ7s9VzWQYvFhhzLt0GM1VAetCy0yi-kO2V1geqBkzeu2UrV7tiISKIQuj6J0T23Jt_NvEMwNrHK1fc5jDEbf9VxHBRu3oycEMNQLc4XVX8vTeRzW1h2MsRi4CQyAe1GPHrP5Xf3GGBAvEB8jln3oOCjq0POZMclHcOAdq_xJ5OfEmjV8ucP9sfdH0a2w1FhoIKI7a6yyClg"/>
-<div class="p-3 bg-zinc-950/50 backdrop-blur-md -mt-12 relative z-10">
-<div class="flex justify-between items-center">
-<span class="text-[10px] font-mono text-primary">SCAN_RESULTS_22.IMG</span>
-<span class="material-symbols-outlined text-xs text-primary" data-icon="download">download</span>
-</div>
-</div>
-</div>
-<span class="text-[9px] uppercase text-zinc-600 mr-1">14:06:30</span>
-</div>
-</section>
-<!-- Footer Input Section -->
-<footer class="fixed bottom-0 left-0 w-full p-5 bg-white/90 backdrop-blur-2xl border-t border-zinc-100 z-50">
-<div class="max-w-4xl mx-auto flex items-center gap-4">
-<div class="flex-1 bg-zinc-50 rounded-2xl px-5 py-4 flex items-center gap-4 border border-zinc-100 shadow-inner">
-<span class="text-2xl">😊</span>
-<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-base text-zinc-900 font-black placeholder:text-zinc-400" placeholder="Tape ton message ici..." type="text"/>
-</div>
-<button onclick="sendSecureMessage()" class="bg-primary text-white p-4 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-<span class="material-symbols-outlined font-black" data-icon="send">send</span>
-</button>
-</div>
-</footer>
-<!-- BottomNavBar (Hidden on desktop as per rules, visible for mobile logic) -->
-<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-4 pointer-events-none">
-<!-- Navigation buttons would go here but shell rules indicate suppression on focused transactional/task screens -->
-</nav>
-</main>
-<!-- UI Interactions / Tooltips -->
-<div class="fixed top-20 right-6 z-[60] space-y-2 pointer-events-none">
-<div class="bg-surface-container-highest/90 backdrop-blur text-[9px] uppercase tracking-widest text-primary px-3 py-1.5 border-r-2 border-primary">
-            Buffer: 1024KB
-        </div>
-<div class="bg-surface-container-highest/90 backdrop-blur text-[9px] uppercase tracking-widest text-tertiary px-3 py-1.5 border-r-2 border-tertiary">
-            Uplink: STABLE
-        </div>
-</div>
 
 <script>
-    // --- INTELLIGENCE DE L'APPLICATION (PWA & STOCKAGE LOCAL) ---
-    
-    // 1. Service Worker pour Vitesse et Hors-Ligne
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then((registration) => {
-                console.log('[PWA] Service Worker injecté', registration.scope);
-            }, (err) => {
-                console.log('[PWA] Échec du Service Worker', err);
-            });
-        });
-    }
-
-    // 2. THEME SWAPPER LOGIC (VIOLET <-> VERT) + STOCKAGE
-    let isGreenTheme = localStorage.getItem('myesther_theme') === 'green';
-    let isEnglish = localStorage.getItem('myesther_lang') === 'en';
-    
-    // Dictionnaire i18n
-    const dict = {
-        'fr': {
-            'text-security': 'Niveau de Sécurité : Oméga',
-            'text-secretlbl': 'Secret Partagé',
-            'secret-input': 'SAISISSEZ LA CLÉ DE CHIFFREMENT',
-            'btn-establish': 'ÉTABLIR LE TUNNEL SÉCURISÉ',
-            'chat-placeholder': 'Tapez un message chiffré...',
-            'lang-ind': 'FR'
-        },
-        'en': {
-            'text-security': 'Security Level: Omega',
-            'text-secretlbl': 'Shared Secret',
-            'secret-input': 'ENTER ENCRYPTION KEY',
-            'btn-establish': 'ESTABLISH SECURE TUNNEL',
-            'chat-placeholder': 'Type an encrypted message...',
-            'lang-ind': 'EN'
+  // Tailwind config AVANT le rendu
+  window.tailwindConfig = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Nunito', 'sans-serif'] },
+        colors: {
+          brand: { DEFAULT: '#7c3aed', light: '#a78bfa', dark: '#5b21b6' }
         }
-    };
-
-    function applyLanguage() {
-        const lang = isEnglish ? 'en' : 'fr';
-        document.getElementById('text-security').innerText = dict[lang]['text-security'];
-        document.getElementById('text-secretlbl').innerText = dict[lang]['text-secretlbl'];
-        document.getElementById('secret-input').placeholder = dict[lang]['secret-input'];
-        
-        const btnNode = document.getElementById('btn-establish');
-        btnNode.innerHTML = dict[lang]['btn-establish'] + ' <span class="material-symbols-outlined" data-icon="bolt">bolt</span>';
-        document.querySelector('#chat-input').placeholder = dict[lang]['chat-placeholder'];
-        document.getElementById('lang-ind').innerText = dict[lang]['lang-ind'];
+      }
     }
-
-    function toggleLanguage() {
-        isEnglish = !isEnglish;
-        localStorage.setItem('myesther_lang', isEnglish ? 'en' : 'fr');
-        applyLanguage();
-    }
-
-    function applyTheme() {
-        if (isGreenTheme) {
-            // GREEN THEME (Mode Matrice)
-            tailwind.config.theme.extend.colors['primary'] = '#00ff88'; // Neon Green
-            tailwind.config.theme.extend.colors['primary-dim'] = '#00cc6a';
-            tailwind.config.theme.extend.colors['primary-fixed'] = '#8affc2';
-            tailwind.config.theme.extend.colors['surface-tint'] = '#00ff88';
-            tailwind.config.theme.extend.colors['tertiary'] = '#ff00ff';
-            
-            document.body.style.setProperty('--color-primary', '#00ff88');
-            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#00ff88");
-            document.documentElement.style.setProperty('--tw-text-opacity', '1');
-        } else {
-            // VIOLET THEME (MyEsther Default)
-            tailwind.config.theme.extend.colors['primary'] = '#e08dff';
-            tailwind.config.theme.extend.colors['primary-dim'] = '#bc00fb';
-            tailwind.config.theme.extend.colors['primary-fixed'] = '#d978ff';
-            tailwind.config.theme.extend.colors['surface-tint'] = '#e08dff';
-            tailwind.config.theme.extend.colors['tertiary'] = '#8ff5ff';
-            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e08dff");
-        }
-    }
-
-    // Palette de thèmes multi-couleurs
-    const themes = {
-        'violet': { primary: '#e08dff', dim: '#bc00fb', fixed: '#d978ff', tertiary: '#8ff5ff', meta: '#e08dff', emoji: '💜' },
-        'green':  { primary: '#00ff88', dim: '#00cc6a', fixed: '#8affc2', tertiary: '#ff00ff', meta: '#00ff88', emoji: '💚' },
-        'rose':   { primary: '#ff6eb4', dim: '#cc2277', fixed: '#ffb3d9', tertiary: '#ffd6ec', meta: '#ff6eb4', emoji: '🌸' },
-        'gold':   { primary: '#ffd700', dim: '#e6ac00', fixed: '#fff176', tertiary: '#ffab40', meta: '#ffd700', emoji: '✨' },
-        'sky':    { primary: '#38bdf8', dim: '#0284c7', fixed: '#bae6fd', tertiary: '#f0abfc', meta: '#38bdf8', emoji: '🩵' }
-    };
-
-    function setCustomTheme(name) {
-        const t = themes[name] || themes['violet'];
-        tailwind.config.theme.extend.colors['primary'] = t.primary;
-        tailwind.config.theme.extend.colors['primary-dim'] = t.dim;
-        tailwind.config.theme.extend.colors['primary-fixed'] = t.fixed;
-        tailwind.config.theme.extend.colors['tertiary'] = t.tertiary;
-        tailwind.config.theme.extend.colors['surface-tint'] = t.primary;
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', t.meta);
-        // Highlight du bouton actif
-        document.querySelectorAll('.theme-btn').forEach(b => b.style.borderColor = 'rgba(255,255,255,0.1)');
-        event.currentTarget.style.borderColor = 'white';
-        localStorage.setItem('myesther_theme', name);
-    }
-
-    function toggleTheme() {
-        // Garde l'ancien toggle violet/vert pour compatibilité
-        isGreenTheme = !isGreenTheme;
-        setCustomTheme(isGreenTheme ? 'green' : 'violet');
-    }
-
-    // Charger l'intelligence sauvegardée depuis le cache du mobile
-    document.addEventListener("DOMContentLoaded", () => {
-        applyLanguage();
-        applyTheme();
-    });
+  };
 </script>
-</body></html>
+
+<style>
+  /* RESET : Force le fond blanc, texte sombre, police joyeuse */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    font-family: 'Nunito', sans-serif;
+    background: #ffffff !important;
+    color: #1a1a2e;
+    overflow: hidden;
+  }
+  input, textarea { color: #1a1a2e !important; background: transparent; }
+  input::placeholder { color: #9ca3af; }
+  
+  /* Fond joyeux : dégradé subtil en haut de page */
+  .joy-bg {
+    background: linear-gradient(160deg, #f5f3ff 0%, #fce7f3 40%, #eff6ff 100%);
+    min-height: 100vh;
+  }
+
+  /* Bouton send */
+  .btn-send {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+    transition: all 0.2s ease;
+  }
+  .btn-send:active { transform: scale(0.93); }
+  .btn-send:hover { box-shadow: 0 6px 26px rgba(124,58,237,0.6); }
+
+  /* Bulles de messages */
+  .bubble-sent {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border-radius: 22px 22px 4px 22px;
+    color: #fff;
+  }
+  .bubble-recv {
+    background: #f3f4f6;
+    border-radius: 22px 22px 22px 4px;
+    color: #1a1a2e;
+  }
+
+  /* Barre du bas */
+  .input-bar {
+    background: #fff;
+    border: 2px solid #ede9fe;
+    border-radius: 28px;
+    transition: border-color 0.2s;
+  }
+  .input-bar:focus-within { border-color: #7c3aed; }
+
+  /* Zone principale du chat */
+  #chat-canvas { overflow-y: auto; scroll-behavior: smooth; }
+  #chat-canvas::-webkit-scrollbar { width: 4px; }
+  #chat-canvas::-webkit-scrollbar-thumb { background: #e9d5ff; border-radius: 99px; }
+
+  /* Panneau d'emojis */
+  #emoji-panel {
+    display: none;
+    position: absolute;
+    bottom: 80px;
+    left: 12px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    border: 1px solid #ede9fe;
+    padding: 12px;
+    z-index: 100;
+    max-width: 320px;
+    animation: popIn 0.2s ease;
+  }
+  #emoji-panel.open { display: block; }
+  @keyframes popIn {
+    from { transform: scale(0.8) translateY(10px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .emoji-btn { font-size: 1.6rem; cursor: pointer; padding: 6px; border-radius: 10px; transition: background 0.15s; }
+  .emoji-btn:hover { background: #f3f4f6; }
+
+  /* Sélecteur de thème couleur */
+  .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s, border-color 0.2s; }
+  .color-dot:hover { transform: scale(1.2); }
+  .color-dot.active { border-color: #1a1a2e; }
+
+  /* Badge de connexion */
+  .conn-badge { animation: fadeInDown 0.5s ease; }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Bouton d'établissement de tunnel */
+  .btn-tunnel {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white;
+    font-weight: 900;
+    font-size: 1.1rem;
+    padding: 18px;
+    border-radius: 18px;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 30px rgba(124,58,237,0.35);
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .btn-tunnel:hover { box-shadow: 0 10px 40px rgba(124,58,237,0.5); transform: translateY(-1px); }
+  .btn-tunnel:active { transform: scale(0.97); }
+
+  /* Input secret */
+  .input-secret {
+    width: 100%;
+    background: #f9f5ff;
+    border: 2px solid #ede9fe;
+    border-radius: 16px;
+    padding: 18px 52px 18px 20px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    outline: none;
+    color: #1a1a2e !important;
+  }
+  .input-secret:focus { border-color: #7c3aed; box-shadow: 0 0 0 4px rgba(124,58,237,0.1); }
+
+  /* Screen de chat */
+  #chat-screen { display: none; height: 100vh; flex-direction: column; background: #fafafa; }
+  #chat-screen.visible { display: flex; }
+
+  /* Indicateur "en train de charger" */
+  .loading-dots span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #7c3aed;
+    animation: dot-bounce 1.4s infinite ease-in-out;
+  }
+  .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes dot-bounce {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- SETUP SCREEN                                                  -->
+<!-- ============================================================ -->
+<main id="setup-screen" class="joy-bg min-h-screen flex flex-col items-center justify-center px-6 py-10 relative">
+
+  <!-- Bulles décoratives en fond -->
+  <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+    <div class="absolute -top-20 -left-20 w-64 h-64 bg-purple-200/40 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 -right-20 w-80 h-80 bg-pink-200/40 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-200/30 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="w-full max-w-sm relative z-10 space-y-8">
+    
+    <!-- Logo & Titre -->
+    <div class="text-center space-y-3">
+      <div class="inline-flex items-center justify-center w-24 h-24 bg-white rounded-3xl shadow-xl border border-purple-100 text-6xl mx-auto">
+        💜
+      </div>
+      <h1 class="text-4xl font-black text-gray-900">MyEsther</h1>
+      <p class="text-sm font-bold text-gray-400 tracking-widest uppercase" id="text-security">🔒 Chat Chiffré Zéro-Connaissance</p>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="bg-white rounded-3xl p-6 shadow-xl border border-purple-50 space-y-5">
+      
+      <div>
+        <label class="block text-sm font-black text-gray-700 mb-2" id="text-secretlbl">🗝️ Secret Partagé</label>
+        <div class="relative">
+          <input
+            id="secret-input"
+            type="password"
+            class="input-secret"
+            placeholder="Votre clé secrète..."
+            autofocus
+            autocomplete="off"
+            autocapitalize="none"
+          />
+          <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl pointer-events-none">🔑</span>
+        </div>
+        <p class="text-xs text-gray-400 font-semibold mt-2 ml-1">Les 2 personnes doivent saisir le même secret</p>
+      </div>
+
+      <button id="btn-establish" class="btn-tunnel" onclick="establishSecureTunnel()">
+        🚀 <span id="btn-text">Établir le Tunnel Sécurisé</span>
+      </button>
+    </div>
+
+    <!-- Badges sécurité -->
+    <div class="flex justify-center gap-5 text-xs font-black text-gray-400 uppercase tracking-wider">
+      <span>🛡️ AES-256</span>
+      <span>🌐 P2P</span>
+      <span>🤫 No-Logs</span>
+    </div>
+
+    <!-- Sélecteur de couleur / thème -->
+    <div class="text-center space-y-3">
+      <p class="text-xs font-black text-gray-400 uppercase tracking-widest">🎨 Ton ambiance</p>
+      <div class="flex justify-center gap-3" id="color-picker">
+        <div class="color-dot active" style="background:#7c3aed" onclick="setTheme('#7c3aed','#a855f7','#f5f3ff')" title="💜 Violet"></div>
+        <div class="color-dot" style="background:#ec4899" onclick="setTheme('#ec4899','#f472b6','#fce7f3')" title="🩷 Rose"></div>
+        <div class="color-dot" style="background:#0ea5e9" onclick="setTheme('#0ea5e9','#38bdf8','#eff6ff')" title="🩵 Bleu"></div>
+        <div class="color-dot" style="background:#10b981" onclick="setTheme('#10b981','#34d399','#ecfdf5')" title="💚 Vert"></div>
+        <div class="color-dot" style="background:#f59e0b" onclick="setTheme('#f59e0b','#fbbf24','#fffbeb')" title="🌟 Or"></div>
+        <div class="color-dot" style="background:#ff6b6b" onclick="setTheme('#ff6b6b','#ff8e8e','#fff0f0')" title="🧡 Corail"></div>
+      </div>
+    </div>
+
+    <!-- Sélecteur de langue -->
+    <div class="text-center">
+      <button onclick="toggleLanguage()" class="text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-700 transition-colors">
+        🌍 <span id="lang-display">Français</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- ============================================================ -->
+<!-- CHAT SCREEN                                                   -->
+<!-- ============================================================ -->
+<main id="chat-screen">
+  
+  <!-- TopBar -->
+  <header class="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-purple-50" id="chat-avatar" style="background:#f5f3ff">
+        💬
+      </div>
+      <div>
+        <h2 class="font-black text-gray-900 text-base">MyEsther Chat</h2>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-gray-400">🔐 Chiffrement actif</span>
+        </div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Toggle langue -->
+      <button onclick="toggleLanguage()" class="text-xs font-black bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-2 rounded-xl transition-colors">
+        🌍 <span id="lang-ind">FR</span>
+      </button>
+      <!-- Toggle thème (rapide) -->
+      <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-lg transition-colors">
+        🎨
+      </button>
+    </div>
+  </header>
+
+  <!-- Picker de thème dans le chat -->
+  <div id="theme-top" class="hidden flex justify-center gap-2 py-2 bg-white border-b border-gray-50 px-4 flex-shrink-0">
+    <div class="color-dot" style="background:#7c3aed" onclick="setTheme('#7c3aed','#a855f7','#f5f3ff')"></div>
+    <div class="color-dot" style="background:#ec4899" onclick="setTheme('#ec4899','#f472b6','#fce7f3')"></div>
+    <div class="color-dot" style="background:#0ea5e9" onclick="setTheme('#0ea5e9','#38bdf8','#eff6ff')"></div>
+    <div class="color-dot" style="background:#10b981" onclick="setTheme('#10b981','#34d399','#ecfdf5')"></div>
+    <div class="color-dot" style="background:#f59e0b" onclick="setTheme('#f59e0b','#fbbf24','#fffbeb')"></div>
+    <div class="color-dot" style="background:#ff6b6b" onclick="setTheme('#ff6b6b','#ff8e8e','#fff0f0')"></div>
+  </div>
+
+  <!-- Zone de messages -->
+  <section id="chat-canvas" class="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+    <!-- Message de bienvenue -->
+    <div class="flex justify-center">
+      <span class="text-xs font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-4 py-2 rounded-full conn-badge">
+        🤝 Tunnel Sécurisé Établi
+      </span>
+    </div>
+
+    <div class="flex flex-col items-start max-w-[82%] space-y-1">
+      <div class="bubble-recv px-5 py-3">
+        <p class="text-sm font-bold leading-relaxed">Salut ! 👋 On est connecté(e)s ici en toute sécurité 😊</p>
+      </div>
+      <span class="text-[10px] text-gray-300 font-bold ml-1">Maintenant</span>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Panneau d'emojis (style WhatsApp)                            -->
+  <!-- ============================================================ -->
+  <div id="emoji-panel" class="absolute bottom-[76px] left-4 right-4 max-w-sm">
+    <div class="flex flex-wrap gap-1 max-h-52 overflow-y-auto custom-scroll" id="emoji-grid">
+      <!-- Emojis injectés par JS -->
+    </div>
+  </div>
+
+  <!-- Zone de saisie -->
+  <footer class="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-100 relative">
+    <div class="flex items-center gap-3">
+      
+      <!-- Bouton emoji -->
+      <button onclick="toggleEmojiPanel()" id="emoji-toggle-btn" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-2xl transition-all flex-shrink-0">
+        😊
+      </button>
+
+      <!-- Champ de texte -->
+      <div class="input-bar flex-1 flex items-center px-4 py-2.5 gap-2">
+        <input
+          id="chat-input"
+          type="text"
+          placeholder="Tape ton message..."
+          class="flex-1 bg-transparent border-none outline-none text-base font-bold text-gray-900 placeholder-gray-400"
+          style="color:#1a1a2e !important"
+        />
+      </div>
+
+      <!-- Bouton envoyer -->
+      <button onclick="sendSecureMessage()" class="btn-send w-11 h-11 rounded-2xl flex items-center justify-center text-white text-xl flex-shrink-0">
+        ➤
+      </button>
+    </div>
+  </footer>
+</main>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS                                                        -->
+<!-- ============================================================ -->
+<script>
+  // === CACHE BREAKER : force le SW à se mettre à jour ===
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.update());
+    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // === THÈME DYNAMIQUE ===
+  let currentPrimary = localStorage.getItem('me_color') || '#7c3aed';
+  let currentLight   = localStorage.getItem('me_light') || '#a855f7';
+  let currentBg      = localStorage.getItem('me_bg')    || '#f5f3ff';
+
+  function setTheme(primary, light, bg) {
+    currentPrimary = primary; currentLight = light; currentBg = bg;
+    localStorage.setItem('me_color', primary);
+    localStorage.setItem('me_light', light);
+    localStorage.setItem('me_bg', bg);
+    applyTheme();
+  }
+
+  function applyTheme() {
+    document.documentElement.style.setProperty('--brand', currentPrimary);
+    // Mettre à jour les styles des éléments dynamiques
+    document.querySelectorAll('.btn-tunnel, .btn-send').forEach(el => {
+      el.style.background = `linear-gradient(135deg, ${currentPrimary}, ${currentLight})`;
+      el.style.boxShadow = `0 6px 30px ${currentPrimary}55`;
+    });
+    document.querySelectorAll('.bubble-sent').forEach(el => {
+      el.style.background = `linear-gradient(135deg, ${currentPrimary}, ${currentLight})`;
+    });
+    document.getElementById('chat-avatar').style.background = currentBg;
+    // Meta theme-color
+    document.querySelector('meta[name="theme-color"]').content = currentPrimary;
+    // Setup screen bg 
+    document.querySelector('.joy-bg')?.style && (document.querySelector('.joy-bg').style.background = 
+      `linear-gradient(160deg, ${currentBg} 0%, #fce7f3 40%, #eff6ff 100%)`);
+    // Dots actifs
+    document.querySelectorAll('.color-dot').forEach(dot => {
+      dot.classList.toggle('active', dot.style.background.includes(currentPrimary.replace('#','')));
+    });
+  }
+
+  // === I18N ===
+  let isEnglish = localStorage.getItem('me_lang') === 'en';
+  const i18n = {
+    fr: {
+      secretLbl: '🗝️ Secret Partagé',
+      btnText: 'Établir le Tunnel Sécurisé',
+      placeholder: 'Votre clé secrète...',
+      chatPlaceholder: 'Tape ton message...',
+      lang: 'Français',
+      langInd: 'FR'
+    },
+    en: {
+      secretLbl: '🗝️ Shared Secret',
+      btnText: 'Establish Secure Tunnel',
+      placeholder: 'Your secret key...',
+      chatPlaceholder: 'Type your message...',
+      lang: 'English',
+      langInd: 'EN'
+    }
+  };
+
+  function toggleLanguage() {
+    isEnglish = !isEnglish;
+    localStorage.setItem('me_lang', isEnglish ? 'en' : 'fr');
+    applyLanguage();
+  }
+
+  function applyLanguage() {
+    const l = isEnglish ? i18n.en : i18n.fr;
+    if (document.getElementById('text-secretlbl')) document.getElementById('text-secretlbl').textContent = l.secretLbl;
+    if (document.getElementById('btn-text')) document.getElementById('btn-text').textContent = l.btnText;
+    if (document.getElementById('secret-input')) document.getElementById('secret-input').placeholder = l.placeholder;
+    if (document.getElementById('chat-input')) document.getElementById('chat-input').placeholder = l.chatPlaceholder;
+    if (document.getElementById('lang-display')) document.getElementById('lang-display').textContent = l.lang;
+    if (document.getElementById('lang-ind')) document.getElementById('lang-ind').textContent = l.langInd;
+  }
+
+  // === EMOJI PICKER ===
+  const EMOJIS = [
+    '😀','😂','🥰','😍','🤩','😎','😊','🥲','😢','😭',
+    '😡','🤬','😱','🤯','🥳','🎉','❤️','💜','💚','💛',
+    '🧡','💙','🖤','🤍','💔','💯','🔥','✨','🌟','⭐',
+    '👍','👎','👋','🙏','🤝','💪','🫶','❤️‍🔥','💬','📩',
+    '🔒','🔑','🛡️','🚀','🌈','🎵','🎶','🍕','🍦','🎂',
+    '🐱','🐶','🦋','🌸','🌹','🌺','🌻','🏆','💎','🎯'
+  ];
+
+  function buildEmojiPanel() {
+    const grid = document.getElementById('emoji-grid');
+    grid.innerHTML = EMOJIS.map(e =>
+      `<button class="emoji-btn" onclick="insertEmoji('${e}')" title="${e}">${e}</button>`
+    ).join('');
+  }
+
+  function insertEmoji(emoji) {
+    const input = document.getElementById('chat-input');
+    const pos = input.selectionStart || input.value.length;
+    input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos);
+    input.focus();
+    input.selectionStart = input.selectionEnd = pos + emoji.length;
+  }
+
+  function toggleEmojiPanel() {
+    const panel = document.getElementById('emoji-panel');
+    panel.classList.toggle('open');
+  }
+
+  // Fermer le panel si on clique ailleurs
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('emoji-panel');
+    const btn = document.getElementById('emoji-toggle-btn');
+    if (!panel.contains(e.target) && e.target !== btn) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // === AFFICHAGE DES MESSAGES ===
+  function appendMessage(text, type) {
+    const canvas = document.getElementById('chat-canvas');
+    const time = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const node = document.createElement('div');
+
+    if (type === 'sent') {
+      node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1';
+      node.innerHTML = `
+        <div class="bubble-sent px-5 py-3" style="background:linear-gradient(135deg,${currentPrimary},${currentLight})">
+          <p class="text-sm font-bold leading-relaxed text-white">${text}</p>
+        </div>
+        <span class="text-[10px] text-gray-300 font-bold mr-1">${time}</span>`;
+    } else {
+      node.className = 'flex flex-col items-start max-w-[82%] space-y-1';
+      node.innerHTML = `
+        <div class="bubble-recv px-5 py-3">
+          <p class="text-sm font-bold leading-relaxed text-gray-800">${text}</p>
+        </div>
+        <span class="text-[10px] text-gray-300 font-bold ml-1">${time}</span>`;
+    }
+
+    canvas.appendChild(node);
+    canvas.scrollTop = canvas.scrollHeight;
+  }
+
+  // === PASSAGE AU CHAT ===
+  // On écrase la fonction appendMessage et la transition dans urya_brain.js
+  window.appendMessage = appendMessage;
+
+  // Patch de la transition setup -> chat pour notre nouvelle UI
+  const _original = window.establishSecureTunnel;
+  window.establishSecureTunnel = async function() {
+    const btn = document.getElementById('btn-establish');
+    btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+    btn.disabled = true;
+    await _original();
+  };
+
+  // Redéfinir la transition après connexion socket
+  document.addEventListener('myesther:connected', () => {
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('chat-screen').classList.add('visible');
+    setTimeout(() => document.getElementById('chat-input')?.focus(), 300);
+  });
+
+  // === ENTER TO SEND ===
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('chat-input');
+    if (input) {
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendSecureMessage();
+        }
+      });
+    }
+
+    // Init
+    buildEmojiPanel();
+    applyTheme();
+    applyLanguage();
+  });
+</script>
+</body>
+</html>

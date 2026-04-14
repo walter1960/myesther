@@ -107,22 +107,27 @@ async function establishSecureTunnel() {
     cipherEngine = new URYATensorFlowCipher(secretInput);
     await cipherEngine.init();
 
-    // C. Connecter le Socket au Relai
-    socket = io(); // URL automatique du backend (même origine)
+    // C. Connecter le Socket au Relai — WebSocket pur pour vitesse max
+    socket = io({ transports: ['websocket'] });
     
     socket.on('connect', () => {
-        console.log('Connecté au serveur Relai. Demande du salon : ' + roomHash);
+        console.log('✅ Connecté au relai via WebSocket pur. Salon : ' + roomHash);
         socket.emit('join_secure_channel', { shared_secret: secretInput });
         
-        // Transition visuelle & Focus
-        document.getElementById('setup-screen').classList.add('hidden');
-        document.getElementById('chat-screen').classList.remove('hidden');
+        // Déclencher la transition UI via l'event custom (compatible nouvelle UI)
+        document.dispatchEvent(new Event('myesther:connected'));
         
-        // Smart UI : Focus auto sur la barre de texte pour taper immédiatement
-        setTimeout(() => {
-            const chatInput = document.querySelector('#chat-input');
-            if (chatInput) chatInput.focus();
-        }, 300);
+        // Fallback pour ancienne UI
+        if (document.getElementById('setup-screen').style.display !== 'none') {
+            document.getElementById('setup-screen').classList.add('hidden');
+            const chatScreen = document.getElementById('chat-screen');
+            chatScreen.classList.remove('hidden');
+            chatScreen.classList.add('visible');
+            setTimeout(() => {
+                const chatInput = document.querySelector('#chat-input');
+                if (chatInput) chatInput.focus();
+            }, 300);
+        }
     });
 
     socket.on('encrypted_payload', (data) => {
