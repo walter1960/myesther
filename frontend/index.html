@@ -9,7 +9,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script src="js/urya_brain.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
         tailwind.config = {
@@ -76,16 +76,19 @@
                         "full": "0.75rem"
                     },
                     "fontFamily": {
-                        "headline": ["Space Grotesk"],
-                        "body": ["Space Grotesk"],
-                        "label": ["Space Grotesk"]
+                        "headline": ["Nunito"],
+                        "body": ["Nunito"],
+                        "label": ["Nunito"]
                     }
                 },
             },
         }
     </script>
 <style>
-        body { font-family: 'Space Grotesk', sans-serif; background-color: #0e0e0f; color: #ffffff; }
+        body { font-family: 'Nunito', sans-serif; background-color: #0e0e0f; color: #ffffff; }
+        * { color: inherit; }
+        input, textarea { color: #ffffff !important; }
+        :root { --joy-emoji-size: 1.4rem; }
         .glass { background: rgba(26, 25, 27, 0.7); backdrop-filter: blur(20px); }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .neon-glow:hover { box-shadow: 0 0 15px rgba(191, 0, 255, 0.6); }
@@ -110,31 +113,41 @@
 <div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-tertiary/10 rounded-full blur-[120px]"></div>
 </div>
 <div class="w-full max-w-md space-y-12">
-<header class="text-center space-y-2">
-<div class="inline-block p-3 bg-surface-container-high rounded-lg mb-4">
-<span class="material-symbols-outlined text-primary text-4xl" data-icon="shield_lock">shield_lock</span>
+<header class="text-center space-y-4">
+<div class="inline-block p-4 bg-surface-container-high rounded-2xl mb-4 shadow-lg shadow-primary/20">
+  <span class="text-5xl">💜</span>
 </div>
-<h1 class="text-4xl font-bold tracking-tighter uppercase text-white"><span class="text-primary-fixed">MyEsther</span></h1>
-<p class="text-on-surface-variant text-sm tracking-[0.2em] uppercase" id="text-security">Niveau de Sécurité : Oméga</p>
+<h1 class="text-5xl font-black text-white">MyEsther <span class="text-2xl">✨</span></h1>
+<p class="text-white/60 text-sm font-semibold" id="text-security">🔒 Niveau de Sécurité : Oméga</p>
 </header>
 <section class="space-y-6">
 <div class="group">
-<label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2 ml-1" id="text-secretlbl">Secret Partagé</label>
+<label class="block text-sm font-bold text-white mb-2 ml-1" id="text-secretlbl">🗝️ Secret Partagé</label>
 <div class="relative">
-<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-surface-container-lowest text-white px-5 py-4 focus:ring-0 focus:outline-none transition-all duration-300 border-b-2 border-transparent focus:border-primary-dim placeholder:text-zinc-700 tracking-[0.2em]" placeholder="SAISISSEZ LA CLÉ DE CHIFFREMENT" type="password"/>
-<span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-zinc-600" data-icon="fingerprint">fingerprint</span>
+<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-surface-container-lowest text-white px-5 py-4 focus:ring-0 focus:outline-none transition-all duration-300 border-b-2 border-transparent focus:border-primary placeholder:text-zinc-500 text-lg font-semibold" placeholder="Entrez votre clé secrète..." type="password"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">🔑</span>
 </div>
 </div>
-<button id="btn-establish" class="w-full bg-gradient-to-br from-primary to-primary-dim text-on-primary-fixed font-bold py-5 uppercase tracking-widest shadow-[0_0_20px_rgba(191,0,255,0.3)] hover:shadow-[0_0_35px_rgba(191,0,255,0.5)] transition-all duration-500 active:scale-95 flex items-center justify-center gap-3" onclick="establishSecureTunnel()">
-                    ÉTABLIR LE TUNNEL SÉCURISÉ
-                    <span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+<button id="btn-establish" class="w-full bg-gradient-to-br from-primary to-primary-dim text-white font-extrabold py-5 text-lg tracking-wide rounded-xl shadow-[0_0_25px_rgba(191,0,255,0.4)] hover:shadow-[0_0_40px_rgba(191,0,255,0.6)] transition-all duration-500 active:scale-95 flex items-center justify-center gap-3" onclick="establishSecureTunnel()">
+  🚀 ÉTABLIR LE TUNNEL SÉCURISÉ
 </button>
 </section>
-<footer class="pt-8 text-center">
-<div class="flex justify-center gap-8 text-[10px] text-zinc-600 font-bold tracking-widest uppercase">
-<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> AES-256</span>
-<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> P2P MESH</span>
-<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> NO-LOGS</span>
+<footer class="pt-6 text-center space-y-4">
+<div class="flex justify-center gap-6 text-xs text-white/50 font-bold">
+  <span>🛡️ AES-256</span>
+  <span>🌐 P2P MESH</span>
+  <span>🤫 NO-LOGS</span>
+</div>
+<!-- Panneau de personnalisation des thèmes -->
+<div class="mt-4">
+  <p class="text-white/40 text-xs font-semibold mb-3">🎨 Personnaliser la couleur</p>
+  <div class="flex justify-center gap-3" id="theme-picker">
+    <button onclick="setCustomTheme('violet')" class="theme-btn w-8 h-8 rounded-full bg-[#e08dff] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💜 Violet (Défaut)"></button>
+    <button onclick="setCustomTheme('green')" class="theme-btn w-8 h-8 rounded-full bg-[#00ff88] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💚 Vert Matrix"></button>
+    <button onclick="setCustomTheme('rose')" class="theme-btn w-8 h-8 rounded-full bg-[#ff6eb4] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="🌸 Rose Sakura"></button>
+    <button onclick="setCustomTheme('gold')" class="theme-btn w-8 h-8 rounded-full bg-[#ffd700] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="✨ Or Soleil"></button>
+    <button onclick="setCustomTheme('sky')" class="theme-btn w-8 h-8 rounded-full bg-[#38bdf8] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="🩵 Bleu Ciel"></button>
+  </div>
 </div>
 </footer>
 </div>
@@ -148,10 +161,10 @@
 <img alt="User Avatar" class="w-full h-full object-cover" data-alt="minimalist pixel art profile icon of a tactical operator with glowing goggles on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZ30F6isvrOuBpbJbUJVy_CwYb39d4PB2ucLTVQNZMDykpg09ahIujkFddfDU1FJYS1us3hBgxKEHod4Yj4Ep3c__aZP1mPwzW9DONfOrnL30sti8rtPqdMoLZdGUxMWb-N-70Bte9OGqc5f182wHaVFCLOtZmfcHiHMjrj4jfdANlb-rpH_I9wQWj36tfq5dKQTj3g_j3Et-OfRIgOtg-VPYOiTUPqIpegrdKU2ohp8T9lhM33X860OSIUmYxG9xJ5DSBqKNlgZI"/>
 </div>
 <div>
-<h2 class="text-sm font-bold tracking-tight font-['Space_Grotesk'] text-white">OPERATOR_X</h2>
+<h2 class="text-sm font-bold text-white">💬 MyEsther Chat</h2>
 <div class="flex items-center gap-1.5">
 <span class="w-2 h-2 rounded-full bg-tertiary pulse-tertiary"></span>
-<span class="text-[9px] uppercase tracking-widest text-tertiary font-bold">Neural Encryption Active</span>
+<span class="text-[9px] uppercase tracking-widest text-white/60 font-bold">🔐 Chiffrement actif</span>
 </div>
 </div>
 </div>
@@ -176,35 +189,31 @@
 <section class="flex-1 overflow-y-auto pt-24 pb-32 px-6 space-y-8">
 <!-- System Log -->
 <div class="flex justify-center">
-<span class="text-[10px] uppercase tracking-[0.3em] text-zinc-600 bg-surface-container-low px-4 py-1 rounded-full">Handshake established via node-772</span>
+<span class="text-xs text-white/40 font-semibold bg-surface-container-low px-4 py-2 rounded-full">🤝 Connexion sécurisée établie !</span>
 </div>
 <!-- Received Message -->
 <div class="flex flex-col items-start max-w-[80%] space-y-1">
-<div class="bg-surface-container-low text-on-surface-variant p-4 rounded-lg rounded-tl-none relative overflow-hidden">
-<div class="absolute top-0 left-0 w-1 h-full bg-zinc-700"></div>
-<p class="text-sm leading-relaxed">Status check. Have you reached the perimeter coordinates? The signal is weak in sector 4.</p>
+<div class="bg-surface-container-low p-4 rounded-2xl rounded-tl-none relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/50"></div>
+<p class="text-sm leading-relaxed text-white font-medium">Salut ! 👋 Tu es connecté(e) ! On peut parler en toute sécurité ici. 😊</p>
 </div>
-<span class="text-[9px] uppercase text-zinc-600 ml-1">14:02:44</span>
+<span class="text-[10px] text-white/30 font-semibold ml-1">14:02:44</span>
 </div>
 <!-- Sent Message (Decryption Simulation logic) -->
 <div class="flex flex-col items-end self-end max-w-[80%] space-y-1">
-<div class="bg-primary-container/10 text-primary-fixed p-4 rounded-lg rounded-tr-none border border-primary/20 relative overflow-hidden">
+<div class="bg-primary/20 p-4 rounded-2xl rounded-tr-none border border-primary/30 relative overflow-hidden">
 <div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
-<!-- HEX to Text Animation Placeholder -->
-<p class="text-sm leading-relaxed font-mono">
-<span class="text-primary-dim">68 65 78 5f 64 61 74 61 5f 70 61 63 6b 65 74</span><br/>
-<span class="text-white opacity-90">In position. Waiting for the uplink to stabilize. Perimeter is clear.</span>
-</p>
+<p class="text-sm leading-relaxed text-white font-medium">Super ! Je suis là. On est bien protégés 🔒🎉</p>
 </div>
-<span class="text-[9px] uppercase text-zinc-600 mr-1">14:05:12</span>
+<span class="text-[10px] text-white/30 font-semibold mr-1">14:05:12</span>
 </div>
 <!-- Received Message -->
 <div class="flex flex-col items-start max-w-[80%] space-y-1">
-<div class="bg-surface-container-low text-on-surface-variant p-4 rounded-lg rounded-tl-none relative overflow-hidden">
-<div class="absolute top-0 left-0 w-1 h-full bg-zinc-700"></div>
-<p class="text-sm leading-relaxed">Understood. Initiating phase 2. Keep the line open. <span class="text-tertiary">#SecureStream</span></p>
+<div class="bg-surface-container-low p-4 rounded-2xl rounded-tl-none relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/50"></div>
+<p class="text-sm leading-relaxed text-white font-medium">Même si quelqu'un écoute, il ne comprendra rien 😂🛡️ C'est la magie de MyEsther !</p>
 </div>
-<span class="text-[9px] uppercase text-zinc-600 ml-1">14:05:59</span>
+<span class="text-[10px] text-white/30 font-semibold ml-1">14:05:59</span>
 </div>
 <!-- Image Transmission -->
 <div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
@@ -223,9 +232,9 @@
 <!-- Footer Input Section -->
 <footer class="fixed bottom-0 left-0 w-full p-4 bg-zinc-950/80 backdrop-blur-2xl border-t border-fuchsia-500/10 z-50">
 <div class="max-w-4xl mx-auto flex items-center gap-3">
-<div class="flex-1 bg-surface-container-lowest rounded-lg px-4 py-3 flex items-center gap-3 group">
-<span class="material-symbols-outlined text-zinc-600" data-icon="add_circle">add_circle</span>
-<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-sm placeholder:text-zinc-700" placeholder="Tapez un message chiffré..." type="text"/>
+<div class="flex-1 bg-surface-container-lowest rounded-xl px-4 py-3 flex items-center gap-3">
+<span class="text-xl">😊</span>
+<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-base text-white font-semibold placeholder:text-zinc-500" placeholder="Votre message..." type="text"/>
 </div>
 <button onclick="sendSecureMessage()" class="bg-primary text-on-primary-fixed p-3 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-[0_0_20px_rgba(191,0,255,0.4)] active:scale-90 group relative overflow-hidden">
 <span class="material-symbols-outlined group-hover:animate-pulse" data-icon="send">send</span>
@@ -328,10 +337,33 @@
         }
     }
 
+    // Palette de thèmes multi-couleurs
+    const themes = {
+        'violet': { primary: '#e08dff', dim: '#bc00fb', fixed: '#d978ff', tertiary: '#8ff5ff', meta: '#e08dff', emoji: '💜' },
+        'green':  { primary: '#00ff88', dim: '#00cc6a', fixed: '#8affc2', tertiary: '#ff00ff', meta: '#00ff88', emoji: '💚' },
+        'rose':   { primary: '#ff6eb4', dim: '#cc2277', fixed: '#ffb3d9', tertiary: '#ffd6ec', meta: '#ff6eb4', emoji: '🌸' },
+        'gold':   { primary: '#ffd700', dim: '#e6ac00', fixed: '#fff176', tertiary: '#ffab40', meta: '#ffd700', emoji: '✨' },
+        'sky':    { primary: '#38bdf8', dim: '#0284c7', fixed: '#bae6fd', tertiary: '#f0abfc', meta: '#38bdf8', emoji: '🩵' }
+    };
+
+    function setCustomTheme(name) {
+        const t = themes[name] || themes['violet'];
+        tailwind.config.theme.extend.colors['primary'] = t.primary;
+        tailwind.config.theme.extend.colors['primary-dim'] = t.dim;
+        tailwind.config.theme.extend.colors['primary-fixed'] = t.fixed;
+        tailwind.config.theme.extend.colors['tertiary'] = t.tertiary;
+        tailwind.config.theme.extend.colors['surface-tint'] = t.primary;
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', t.meta);
+        // Highlight du bouton actif
+        document.querySelectorAll('.theme-btn').forEach(b => b.style.borderColor = 'rgba(255,255,255,0.1)');
+        event.currentTarget.style.borderColor = 'white';
+        localStorage.setItem('myesther_theme', name);
+    }
+
     function toggleTheme() {
+        // Garde l'ancien toggle violet/vert pour compatibilité
         isGreenTheme = !isGreenTheme;
-        localStorage.setItem('myesther_theme', isGreenTheme ? 'green' : 'violet');
-        applyTheme();
+        setCustomTheme(isGreenTheme ? 'green' : 'violet');
     }
 
     // Charger l'intelligence sauvegardée depuis le cache du mobile
