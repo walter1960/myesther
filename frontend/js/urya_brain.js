@@ -160,6 +160,9 @@ function receiveMessage(encryptedArray) {
     const decryptedBytes = receivedBytes.map(b => b ^ 0x4A); // Match the fake encryption for POC
     const text = new TextDecoder().decode(decryptedBytes);
     
+    // Déclencher la notification locale (son + alerte si onglet caché)
+    if (window.pushNotification) window.pushNotification(text);
+    
     appendMessage(text, 'received');
 }
 

@@ -282,6 +282,10 @@
       <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-500 transition-colors">
         ◑
       </button>
+      <!-- Toggle Notifications -->
+      <button onclick="toggleNotifications()" id="notif-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-400 transition-colors" title="Activer les notifications">
+        🔔
+      </button>
     </div>
   </header>
 
@@ -529,6 +533,72 @@
         }
       });
     }
+
+    // === NOTIFICATIONS LOGIC ===
+    let notifsEnabled = false;
+
+    function toggleNotifications() {
+      if (!("Notification" in window)) {
+        alert("Ce navigateur ne supporte pas les notifications.");
+        return;
+      }
+
+      if (Notification.permission === "granted") {
+        notifsEnabled = !notifsEnabled;
+        updateNotifUI();
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            notifsEnabled = true;
+            updateNotifUI();
+            new Notification("MyEsther", { body: "Notifications activées ! 🔒" });
+          }
+        });
+      } else {
+        alert("Notifications bloquées. Veuillez les activer dans les paramètres du navigateur.");
+      }
+    }
+
+    function updateNotifUI() {
+      const btn = document.getElementById('notif-btn');
+      if (notifsEnabled) {
+        btn.classList.remove('text-gray-400');
+        btn.classList.add('text-brand');
+        btn.textContent = '🔕';
+        btn.title = "Désactiver les notifications";
+      } else {
+        btn.classList.remove('text-brand');
+        btn.classList.add('text-gray-400');
+        btn.textContent = '🔔';
+        btn.title = "Activer les notifications";
+      }
+    }
+
+    function playNotifSound() {
+      // Synthétiseur de bip léger (très rapide, pas besoin de fichier audio externe)
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Note A5
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+      } catch(e) { console.log("Audio not allowed yet"); }
+    }
+
+    window.pushNotification = function(text) {
+      if (notifsEnabled && document.visibilityState !== 'visible') {
+        new Notification("MyEsther", {
+          body: "Nouveau message sécurisé reçu 🔒",
+          icon: "/manifest.json" // Utilise l'icône de l'app si possible
+        });
+      }
+      if (notifsEnabled) playNotifSound();
+    };
 
     // Init
     buildEmojiPanel();
