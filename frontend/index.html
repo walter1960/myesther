@@ -86,28 +86,7 @@
   #chat-canvas::-webkit-scrollbar { width: 4px; }
   #chat-canvas::-webkit-scrollbar-thumb { background: #e9d5ff; border-radius: 99px; }
 
-  /* Panneau d'emojis */
-  #emoji-panel {
-    display: none;
-    position: absolute;
-    bottom: 80px;
-    left: 12px;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.12);
-    border: 1px solid #ede9fe;
-    padding: 12px;
-    z-index: 100;
-    max-width: 320px;
-    animation: popIn 0.2s ease;
-  }
-  #emoji-panel.open { display: block; }
-  @keyframes popIn {
-    from { transform: scale(0.8) translateY(10px); opacity: 0; }
-    to   { transform: scale(1) translateY(0); opacity: 1; }
-  }
-  .emoji-btn { font-size: 1.6rem; cursor: pointer; padding: 6px; border-radius: 10px; transition: background 0.15s; }
-  .emoji-btn:hover { background: #f3f4f6; }
+  /* Panneau d'emojis supprimé */
 
   /* Sélecteur de thème couleur */
   .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s, border-color 0.2s; }
@@ -208,8 +187,10 @@
     
     <!-- Logo & Titre -->
     <div class="text-center space-y-3">
-      <div class="inline-flex items-center justify-center w-24 h-24 bg-white rounded-3xl shadow-xl border border-purple-100 text-6xl mx-auto">
-        💜
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-xl border border-purple-100 text-brand mx-auto">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
       </div>
       <h1 class="text-4xl font-black text-gray-900">MyEsther</h1>
       <p class="text-sm font-bold text-gray-400 tracking-widest uppercase" id="text-security">Chat Chiffré Zéro-Connaissance</p>
@@ -230,7 +211,9 @@
             autocomplete="off"
             autocapitalize="none"
           />
-          <span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl pointer-events-none">🔑</span>
+          <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+          </span>
         </div>
         <div class="flex flex-wrap gap-2 mt-3" id="history-tags">
           <!-- Injecté par JS : tunnels récents -->
@@ -271,7 +254,7 @@
     <!-- Sélecteur de langue -->
     <div class="text-center">
       <button onclick="toggleLanguage()" class="text-xs font-black text-gray-400 uppercase tracking-widest hover:text-gray-700 transition-colors">
-        🌍 <span id="lang-display">Français</span>
+        <span id="lang-display">Français</span>
       </button>
     </div>
   </div>
@@ -285,8 +268,8 @@
   <!-- TopBar -->
   <header class="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-purple-50" id="chat-avatar" style="background:#f5f3ff">
-        💬
+      <div class="w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm border border-brand/20 text-brand" id="chat-avatar" style="background:#f5f3ff">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
       </div>
       <div>
         <h2 class="font-black text-gray-900 text-base">MyEsther Chat</h2>
@@ -302,16 +285,16 @@
         <span id="lang-ind">FR</span>
       </button>
       <!-- Toggle thème (rapide) -->
-      <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-500 transition-colors">
-        ◑
+      <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25l7.22-7.22a3.75 3.75 0 015.304 5.304L6.75 21z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 5.25a3 3 0 00-4.242 0l-1.061 1.06-1.06-1.061a3 3 0 00-4.243 0 3 3 0 000 4.242l1.06 1.06 1.06-1.06a3 3 0 000-4.242z" /></svg>
       </button>
       <!-- Toggle Notifications -->
-      <button onclick="toggleNotifications()" id="notif-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-400 transition-colors" title="Activer les notifications">
-        🔔
+      <button onclick="toggleNotifications()" id="notif-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 transition-colors" title="Activer les notifications">
+        <svg id="icon-bell" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
       </button>
       <!-- Toggle Auto-Destruct -->
-      <button onclick="toggleAutoDestruct()" id="shredder-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-400 transition-colors" title="Mode Éphémère (Auto-destruction)">
-        ⏳
+      <button onclick="toggleAutoDestruct()" id="shredder-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-400 transition-colors" title="Mode Éphémère (Auto-destruction)">
+        <svg id="icon-clock" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </button>
     </div>
   </header>
@@ -348,27 +331,13 @@
     </div>
   </section>
 
-  <!-- ============================================================ -->
-  <!-- Panneau d'emojis (style WhatsApp)                            -->
-  <!-- ============================================================ -->
-  <div id="emoji-panel" class="absolute bottom-[76px] left-4 right-4 max-w-sm">
-    <div class="flex flex-wrap gap-1 max-h-52 overflow-y-auto custom-scroll" id="emoji-grid">
-      <!-- Emojis injectés par JS -->
-    </div>
-  </div>
-
   <!-- Zone de saisie -->
   <footer class="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-100 relative">
     <div class="flex items-center gap-3">
       
-      <!-- Bouton emoji -->
-      <button onclick="toggleEmojiPanel()" id="emoji-toggle-btn" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-2xl transition-all flex-shrink-0">
-        😊
-      </button>
-
       <!-- Bouton image -->
-      <button onclick="document.getElementById('file-input').click()" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xl transition-all flex-shrink-0 text-gray-500">
-        📎
+      <button onclick="document.getElementById('file-input').click()" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-all flex-shrink-0 text-gray-500">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
         <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSelection(this)"/>
       </button>
 
@@ -384,8 +353,8 @@
       </div>
 
       <!-- Bouton envoyer -->
-      <button onclick="sendSecureMessage()" class="btn-send w-11 h-11 rounded-2xl flex items-center justify-center text-white text-xl flex-shrink-0">
-        ➤
+      <button onclick="sendSecureMessage()" class="btn-send w-11 h-11 rounded-2xl flex items-center justify-center text-white flex-shrink-0">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 translate-x-0.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" /></svg>
       </button>
     </div>
   </footer>
@@ -442,7 +411,7 @@
   let isEnglish = localStorage.getItem('me_lang') === 'en';
   const i18n = {
     fr: {
-      secretLbl: '🗝️ Secret Partagé',
+      secretLbl: 'Secret Partagé',
       btnText: 'Établir le Tunnel Sécurisé',
       placeholder: 'Votre clé secrète...',
       chatPlaceholder: 'Tape ton message...',
@@ -450,7 +419,7 @@
       langInd: 'FR'
     },
     en: {
-      secretLbl: '🗝️ Shared Secret',
+      secretLbl: 'Shared Secret',
       btnText: 'Establish Secure Tunnel',
       placeholder: 'Your secret key...',
       chatPlaceholder: 'Type your message...',
@@ -474,45 +443,6 @@
     if (document.getElementById('lang-display')) document.getElementById('lang-display').textContent = l.lang;
     if (document.getElementById('lang-ind')) document.getElementById('lang-ind').textContent = l.langInd;
   }
-
-  // === EMOJI PICKER ===
-  const EMOJIS = [
-    '😀','😂','🥰','😍','🤩','😎','😊','🥲','😢','😭',
-    '😡','🤬','😱','🤯','🥳','🎉','❤️','💜','💚','💛',
-    '🧡','💙','🖤','🤍','💔','💯','🔥','✨','🌟','⭐',
-    '👍','👎','👋','🙏','🤝','💪','🫶','❤️‍🔥','💬','📩',
-    '🔒','🔑','🛡️','🚀','🌈','🎵','🎶','🍕','🍦','🎂',
-    '🐱','🐶','🦋','🌸','🌹','🌺','🌻','🏆','💎','🎯'
-  ];
-
-  function buildEmojiPanel() {
-    const grid = document.getElementById('emoji-grid');
-    grid.innerHTML = EMOJIS.map(e =>
-      `<button class="emoji-btn" onclick="insertEmoji('${e}')" title="${e}">${e}</button>`
-    ).join('');
-  }
-
-  function insertEmoji(emoji) {
-    const input = document.getElementById('chat-input');
-    const pos = input.selectionStart || input.value.length;
-    input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos);
-    input.focus();
-    input.selectionStart = input.selectionEnd = pos + emoji.length;
-  }
-
-  function toggleEmojiPanel() {
-    const panel = document.getElementById('emoji-panel');
-    panel.classList.toggle('open');
-  }
-
-  // Fermer le panel si on clique ailleurs
-  document.addEventListener('click', (e) => {
-    const panel = document.getElementById('emoji-panel');
-    const btn = document.getElementById('emoji-toggle-btn');
-    if (!panel.contains(e.target) && e.target !== btn) {
-      panel.classList.remove('open');
-    }
-  });
 
   // === AFFICHAGE DES MESSAGES ===
   function appendMessage(text, type) {
@@ -602,13 +532,13 @@
       if (notifsEnabled) {
         btn.classList.remove('text-gray-400');
         btn.classList.add('text-brand');
-        btn.textContent = '🔕';
         btn.title = "Désactiver les notifications";
+        btn.querySelector('svg').outerHTML = `<svg id="icon-bell" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 5L5 19" /></svg>`;
       } else {
         btn.classList.remove('text-brand');
         btn.classList.add('text-gray-400');
-        btn.textContent = '🔔';
         btn.title = "Activer les notifications";
+        btn.querySelector('svg').outerHTML = `<svg id="icon-bell" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>`;
       }
     }
 
@@ -658,7 +588,6 @@
     }
 
     // Init
-    buildEmojiPanel();
     applyTheme();
     applyLanguage();
   });
