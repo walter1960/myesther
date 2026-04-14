@@ -149,14 +149,81 @@ class URYAPeer {
         }
         return false;
     }
+
+    async hashSecret(secret) {
+        const msgUint8 = new TextEncoder().encode(secret);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+}
+
+// --- 2. GESTION DU STOCKAGE PERSISTANT (IndexedDB) ---
+
+class URYAStorage {
+    constructor(dbName) {
+        this.dbName = `myesther_db_${dbName}`; // Isolation par secret (Déni Plausible)
+        this.db = null;
+    }
+
+    async init() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onerror = e => reject(e);
+            request.onsuccess = e => {
+                this.db = e.target.result;
+                resolve();
+            };
+            request.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('messages')) {
+                    db.createObjectStore('messages', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+        });
+    }
+
+    async saveMessage(msg) {
+        if (!this.db) return;
+        const tx = this.db.transaction('messages', 'readwrite');
+        const store = tx.objectStore('messages');
+        store.add({ ...msg, timestamp: Date.now() });
+    }
+
+    async loadMessages() {
+        if (!this.db) return [];
+        return new Promise((resolve) => {
+            const tx = this.db.transaction('messages', 'readonly');
+            const store = tx.objectStore('messages');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+        });
+    }
+
+    static async nuke() {
+        // Purge de TOUTES les bases MyEsther trouvées
+        const dbs = await window.indexedDB.databases();
+        dbs.forEach(db => {
+            if (db.name.startsWith('myesther_db_')) {
+                window.indexedDB.deleteDatabase(db.name);
+            }
+        });
+        localStorage.clear();
+        location.reload();
+    }
 }
 
 // --- 3. LOGIQUE GLOBALE DE L'APPLICATION ---
 
 const cryptoEngine = new URYACrypto();
+let storageEngine = null;
 let peerController = null;
 let socket = null;
 let currentSecret = "";
+let currentSendMode = 'normal'; // 'normal' ou 'burn'
+let ghostTimer = null;
+let panicClicks = 0;
+let panicTimer = null;
+let holdTimer = null;
 
 async function establishSecureTunnel() {
     currentSecret = document.getElementById('secret-input').value;
@@ -167,17 +234,35 @@ async function establishSecureTunnel() {
 
     // A. Dérivation de clé Haute Sécurité
     await cryptoEngine.deriveKey(currentSecret);
+    
+    // B. Initialisation du stockage isolé (Déni Plausible)
+    const dbId = await cryptoEngine.hashSecret(currentSecret);
+    storageEngine = new URYAStorage(dbId);
+    await storageEngine.init();
 
-    // B. Connexion Socket IO (Signaling)
+    // C. Connexion Socket IO (Signaling)
     socket = io({ transports: ['websocket'] });
 
-    socket.on('connect', () => {
+    socket.on('connect', async () => {
         socket.emit('join_secure_channel', { shared_secret: currentSecret });
         
         // Initialiser le P2P
         peerController = new URYAPeer(receivePayload, updateP2PStatus);
         peerController.init(socket);
         
+        // Charger l'historique
+        const history = await storageEngine.loadMessages();
+        const canvas = document.getElementById('chat-canvas');
+        // Nettoyer le canvas avant de charger (sauf indicateur de frappe)
+        const typing = document.getElementById('typing-indicator');
+        canvas.innerHTML = '';
+        canvas.appendChild(typing);
+
+        for (const m of history) {
+            const dec = await cryptoEngine.decrypt(m.content);
+            if (dec) appendMessage(dec, m.sender === 'me' ? 'sent' : 'received', false, m.timestamp);
+        }
+
         // On tente de démarrer le P2P (Alice envoie l'offre)
         peerController.startP2P();
 
@@ -269,27 +354,41 @@ async function sendSecureMessage() {
     // Chiffrement AES-GCM réel
     const encryptedData = await cryptoEngine.encrypt(text);
     
-    const payload = { type: 'msg', content: encryptedData };
+    const payload = { 
+        type: 'msg', 
+        content: encryptedData, 
+        ttl: currentSendMode === 'burn' ? 10 : (24 * 3600), // 10s ou 24H
+        burn: currentSendMode === 'burn'
+    };
 
     // Tenter P2P, sinon fallback Socket
     const sentP2P = peerController.send(payload);
     if (!sentP2P) {
-        socket.emit('encrypted_payload', encryptedData);
+        socket.emit('encrypted_payload', payload);
     }
 
-    appendMessage(text, 'sent');
+    // Sauvegarde locale
+    if (storageEngine) {
+        storageEngine.saveMessage({ ...payload, sender: 'me' });
+    }
+
+    appendMessage(text, 'sent', false, Date.now(), currentSendMode === 'burn');
     input.value = '';
+    
+    // Reset mode après envoi burn
+    if (currentSendMode === 'burn') setSendMode('normal');
 }
 
 async function receivePayload(payload) {
     if (payload.type === 'msg' || payload.type === 'img') {
         const decryptedContent = await cryptoEngine.decrypt(payload.content);
         if (decryptedContent) {
-            if (payload.type === 'img') {
-                appendMessage(decryptedContent, 'received', true);
-            } else {
-                appendMessage(decryptedContent, 'received');
+            // Sauvegarde locale
+            if (storageEngine) {
+                storageEngine.saveMessage({ ...payload, sender: 'them' });
             }
+
+            appendMessage(decryptedContent, 'received', payload.type === 'img', Date.now(), payload.burn);
             if (window.pushNotification) window.pushNotification();
         }
     } else if (payload.type === 'typing') {
@@ -371,9 +470,9 @@ function toggleAutoDestruct() {
 
 // --- 6. UI UPDATE (MESSAGES) ---
 
-function appendMessage(content, type, isImage = false) {
+function appendMessage(content, type, isImage = false, timestamp = Date.now(), burnOnRead = false) {
     const canvas = document.getElementById('chat-canvas');
-    const time = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const time = new Date(timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
     const node = document.createElement('div');
     const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
     node.id = msgId;
@@ -382,13 +481,27 @@ function appendMessage(content, type, isImage = false) {
         ? `<img src="${content}" class="max-w-full rounded-xl shadow-sm cursor-zoom-in" onclick="window.open(this.src)"/>`
         : `<p class="text-sm font-bold leading-relaxed ${type==='sent' ? 'text-white' : 'text-gray-800'}">${content}</p>`;
 
+    if (burnOnRead && type === 'received') {
+        // Mode Burn-on-Read UI
+        body = `
+            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all" onclick="revealBurnMessage('${msgId}')">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-gray-400 mb-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>
+                <span class="text-[10px] font-black uppercase text-gray-500">Contenu Sensible - Révéler</span>
+            </div>
+            <div id="content-${msgId}" class="hidden relative">
+                ${body}
+                <div id="progress-${msgId}" class="burn-progress" style="width: 100%"></div>
+            </div>
+        `;
+    }
+
     if (type === 'sent') {
         node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
         node.innerHTML = `
             <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${currentPrimary},${currentLight})">
                ${body}
             </div>
-            <span class="text-[10px] text-gray-300 font-bold mr-1">${time}</span>`;
+            <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '🔥' : ''}</span>`;
     } else {
         node.className = 'flex flex-col items-start max-w-[82%] space-y-1 mb-4';
         node.innerHTML = `
@@ -401,14 +514,36 @@ function appendMessage(content, type, isImage = false) {
     canvas.appendChild(node);
     canvas.scrollTop = canvas.scrollHeight;
 
-    // Auto-Destruction logic
-    if (isAutoDestruct) {
-        node.style.transition = 'opacity 2s ease, transform 2s ease';
+    // Suppression Auto si mode éphémère général actif (et pas burn-on-read déjà)
+    if (isAutoDestruct && !burnOnRead) {
+        setTimeout(() => node.remove(), 10000);
+    }
+}
+
+function revealBurnMessage(id) {
+    const cover = document.getElementById(`cover-${id}`);
+    const content = document.getElementById(`content-${id}`);
+    const bar = document.getElementById(`progress-${id}`);
+    
+    if (cover && content) {
+        cover.classList.add('hidden');
+        content.classList.remove('hidden');
+        
+        // Démarrer Chrono visuel
+        if (bar) {
+            setTimeout(() => bar.style.width = '0%', 100);
+        }
+        
+        // Destruction
         setTimeout(() => {
-            node.style.opacity = '0';
-            node.style.transform = 'translateY(-10px) scale(0.95)';
-            setTimeout(() => node.remove(), 2000);
-        }, 10000); // 10 secondes
+            const node = document.getElementById(id);
+            if (node) {
+                node.style.transition = 'all 0.5s';
+                node.style.opacity = '0';
+                node.style.transform = 'scale(0.8)';
+                setTimeout(() => node.remove(), 500);
+            }
+        }, 10000);
     }
 }
 
@@ -432,11 +567,58 @@ function showTypingIndicator(name) {
     }, 2000);
 }
 
+// --- 8. V3 EXCLUSIVES: PANIC, GHOST, HOLD ---
+
+function handlePanicClick() {
+    panicClicks++;
+    clearTimeout(panicTimer);
+    if (panicClicks === 3) {
+        URYAStorage.nuke();
+        return;
+    }
+    panicTimer = setTimeout(() => panicClicks = 0, 1000);
+}
+
+function resetGhostTimer() {
+    const canvas = document.getElementById('chat-canvas');
+    canvas.classList.remove('ghost-mode');
+    clearTimeout(ghostTimer);
+    ghostTimer = setTimeout(() => {
+        canvas.classList.add('ghost-mode');
+    }, 10000); // 10 secondes d'inactivité
+}
+
+function handleSendStart() {
+    holdTimer = setTimeout(() => {
+        document.getElementById('hold-menu').classList.add('active');
+    }, 600);
+}
+
+function handleSendEnd() {
+    clearTimeout(holdTimer);
+}
+
+function setSendMode(mode) {
+    currentSendMode = mode;
+    const btn = document.getElementById('send-btn');
+    if (mode === 'burn') {
+        btn.classList.add('ring-4', 'ring-red-500/30');
+    } else {
+        btn.classList.remove('ring-4', 'ring-red-500/30');
+    }
+    document.getElementById('hold-menu').classList.remove('active');
+}
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     const chatInput = document.getElementById('chat-input');
     if (chatInput) {
         chatInput.addEventListener('input', notifyTyping);
+        chatInput.addEventListener('keypress', resetGhostTimer);
     }
+    document.addEventListener('mousemove', resetGhostTimer);
+    document.addEventListener('touchstart', resetGhostTimer);
+    resetGhostTimer();
 });
+
