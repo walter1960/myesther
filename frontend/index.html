@@ -197,14 +197,14 @@
         💜
       </div>
       <h1 class="text-4xl font-black text-gray-900">MyEsther</h1>
-      <p class="text-sm font-bold text-gray-400 tracking-widest uppercase" id="text-security">🔒 Chat Chiffré Zéro-Connaissance</p>
+      <p class="text-sm font-bold text-gray-400 tracking-widest uppercase" id="text-security">Chat Chiffré Zéro-Connaissance</p>
     </div>
 
     <!-- Formulaire -->
     <div class="bg-white rounded-3xl p-6 shadow-xl border border-purple-50 space-y-5">
       
       <div>
-        <label class="block text-sm font-black text-gray-700 mb-2" id="text-secretlbl">🗝️ Secret Partagé</label>
+        <label class="block text-sm font-black text-gray-700 mb-2" id="text-secretlbl">Secret Partagé</label>
         <div class="relative">
           <input
             id="secret-input"
@@ -221,20 +221,20 @@
       </div>
 
       <button id="btn-establish" class="btn-tunnel" onclick="establishSecureTunnel()">
-        🚀 <span id="btn-text">Établir le Tunnel Sécurisé</span>
+        <span id="btn-text">Etablir le Tunnel Sécurisé</span>
       </button>
     </div>
 
     <!-- Badges sécurité -->
     <div class="flex justify-center gap-5 text-xs font-black text-gray-400 uppercase tracking-wider">
-      <span>🛡️ AES-256</span>
-      <span>🌐 P2P</span>
-      <span>🤫 No-Logs</span>
+      <span>AES-256</span>
+      <span>P2P</span>
+      <span>No-Logs</span>
     </div>
 
     <!-- Sélecteur de couleur / thème -->
     <div class="text-center space-y-3">
-      <p class="text-xs font-black text-gray-400 uppercase tracking-widest">🎨 Ton ambiance</p>
+      <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Personnaliser la couleur</p>
       <div class="flex justify-center gap-3" id="color-picker">
         <div class="color-dot active" style="background:#7c3aed" onclick="setTheme('#7c3aed','#a855f7','#f5f3ff')" title="💜 Violet"></div>
         <div class="color-dot" style="background:#ec4899" onclick="setTheme('#ec4899','#f472b6','#fce7f3')" title="🩷 Rose"></div>
@@ -269,18 +269,18 @@
         <h2 class="font-black text-gray-900 text-base">MyEsther Chat</h2>
         <div class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-          <span class="text-xs font-bold text-gray-400">🔐 Chiffrement actif</span>
+          <span class="text-xs font-bold text-gray-400">Chiffrement actif</span>
         </div>
       </div>
     </div>
     <div class="flex items-center gap-2">
       <!-- Toggle langue -->
       <button onclick="toggleLanguage()" class="text-xs font-black bg-gray-100 hover:bg-gray-200 text-gray-500 px-3 py-2 rounded-xl transition-colors">
-        🌍 <span id="lang-ind">FR</span>
+        <span id="lang-ind">FR</span>
       </button>
       <!-- Toggle thème (rapide) -->
-      <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-lg transition-colors">
-        🎨
+      <button onclick="document.getElementById('theme-top').classList.toggle('hidden')" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-500 transition-colors">
+        ◑
       </button>
     </div>
   </header>
@@ -300,13 +300,13 @@
     <!-- Message de bienvenue -->
     <div class="flex justify-center">
       <span class="text-xs font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-4 py-2 rounded-full conn-badge">
-        🤝 Tunnel Sécurisé Établi
+        Tunnel Sécurisé Etabli
       </span>
     </div>
 
     <div class="flex flex-col items-start max-w-[82%] space-y-1">
       <div class="bubble-recv px-5 py-3">
-        <p class="text-sm font-bold leading-relaxed">Salut ! 👋 On est connecté(e)s ici en toute sécurité 😊</p>
+        <p class="text-sm font-bold leading-relaxed">Bonjour ! Vous êtes connecté(e) en toute sécurité.</p>
       </div>
       <span class="text-[10px] text-gray-300 font-bold ml-1">Maintenant</span>
     </div>
