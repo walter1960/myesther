@@ -309,6 +309,10 @@
       <button onclick="toggleNotifications()" id="notif-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-400 transition-colors" title="Activer les notifications">
         🔔
       </button>
+      <!-- Toggle Auto-Destruct -->
+      <button onclick="toggleAutoDestruct()" id="shredder-btn" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-base font-black text-gray-400 transition-colors" title="Mode Éphémère (Auto-destruction)">
+        ⏳
+      </button>
     </div>
   </header>
 
@@ -360,6 +364,12 @@
       <!-- Bouton emoji -->
       <button onclick="toggleEmojiPanel()" id="emoji-toggle-btn" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-2xl transition-all flex-shrink-0">
         😊
+      </button>
+
+      <!-- Bouton image -->
+      <button onclick="document.getElementById('file-input').click()" class="w-11 h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xl transition-all flex-shrink-0 text-gray-500">
+        📎
+        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSelection(this)"/>
       </button>
 
       <!-- Champ de texte -->

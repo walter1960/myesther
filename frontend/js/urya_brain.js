@@ -139,8 +139,13 @@ class URYAPeer {
 
     send(data) {
         if (this.dataChannel && this.dataChannel.readyState === 'open') {
-            this.dataChannel.send(JSON.stringify(data));
-            return true;
+            try {
+                this.dataChannel.send(JSON.stringify(data));
+                return true;
+            } catch(e) { 
+                console.error("DataChannel send error", e);
+                return false; 
+            }
         }
         return false;
     }
@@ -220,10 +225,14 @@ async function sendSecureMessage() {
 }
 
 async function receivePayload(payload) {
-    if (payload.type === 'msg') {
-        const decryptedText = await cryptoEngine.decrypt(payload.content);
-        if (decryptedText) {
-            appendMessage(decryptedText, 'received');
+    if (payload.type === 'msg' || payload.type === 'img') {
+        const decryptedContent = await cryptoEngine.decrypt(payload.content);
+        if (decryptedContent) {
+            if (payload.type === 'img') {
+                appendMessage(decryptedContent, 'received', true);
+            } else {
+                appendMessage(decryptedContent, 'received');
+            }
             if (window.pushNotification) window.pushNotification();
         }
     } else if (payload.type === 'typing') {
@@ -248,11 +257,106 @@ function loadHistory() {
     if (!container) return;
     
     container.innerHTML = history.reverse().map(s => 
-        `<button onclick="document.getElementById('secret-input').value='${s}'; establishSecureTunnel()" class="bg-zinc-100 text-zinc-500 text-[10px] px-2 py-1 rounded hover:bg-brand hover:text-white transition-colors">${s.substring(0,6)}...</button>`
+        `<button onclick="document.getElementById('secret-input').value='${s}'; establishSecureTunnel()" class="bg-zinc-100 text-zinc-500 text-[10px] px-2 py-1 rounded-full hover:bg-brand hover:text-white transition-colors border border-purple-50">${s.substring(0,8)}...</button>`
     ).join(' ');
 }
 
-// Indicateur de frappe
+// --- 5. IMAGES & AUTO-DESTRUCT ---
+
+async function handleImageSelection(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const img = new Image();
+        img.onload = async () => {
+            // Redimensionnement pour fluidité P2P
+            const canvas = document.createElement('canvas');
+            const max = 600;
+            let w = img.width, h = img.height;
+            if (w > max) { h *= max/w; w = max; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            const encryptedData = await cryptoEngine.encrypt(dataUrl);
+            const payload = { type: 'img', content: encryptedData };
+
+            const sentP2P = peerController.send(payload);
+            if (!sentP2P && socket) {
+                socket.emit('encrypted_payload', encryptedData);
+            }
+            appendMessage(dataUrl, 'sent', true);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    input.value = ""; // Reset
+}
+
+let isAutoDestruct = false;
+function toggleAutoDestruct() {
+    isAutoDestruct = !isAutoDestruct;
+    const btn = document.getElementById('shredder-btn');
+    if (isAutoDestruct) {
+        btn.classList.remove('text-gray-400');
+        btn.classList.add('text-orange-500');
+        btn.textContent = '🔥';
+        btn.title = "Mode Éphémère ACTIVÉ (10s)";
+    } else {
+        btn.classList.remove('text-orange-500');
+        btn.classList.add('text-gray-400');
+        btn.textContent = '⏳';
+        btn.title = "Mode Éphémère DÉSACTIVÉ";
+    }
+}
+
+// --- 6. UI UPDATE (MESSAGES) ---
+
+function appendMessage(content, type, isImage = false) {
+    const canvas = document.getElementById('chat-canvas');
+    const time = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const node = document.createElement('div');
+    const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
+    node.id = msgId;
+
+    let body = isImage 
+        ? `<img src="${content}" class="max-w-full rounded-xl shadow-sm cursor-zoom-in" onclick="window.open(this.src)"/>`
+        : `<p class="text-sm font-bold leading-relaxed ${type==='sent' ? 'text-white' : 'text-gray-800'}">${content}</p>`;
+
+    if (type === 'sent') {
+        node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
+        node.innerHTML = `
+            <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${currentPrimary},${currentLight})">
+               ${body}
+            </div>
+            <span class="text-[10px] text-gray-300 font-bold mr-1">${time}</span>`;
+    } else {
+        node.className = 'flex flex-col items-start max-w-[82%] space-y-1 mb-4';
+        node.innerHTML = `
+            <div class="bubble-recv px-4 py-3">
+               ${body}
+            </div>
+            <span class="text-[10px] text-gray-300 font-bold ml-1">${time}</span>`;
+    }
+
+    canvas.appendChild(node);
+    canvas.scrollTop = canvas.scrollHeight;
+
+    // Auto-Destruction logic
+    if (isAutoDestruct) {
+        node.style.transition = 'opacity 2s ease, transform 2s ease';
+        setTimeout(() => {
+            node.style.opacity = '0';
+            node.style.transform = 'translateY(-10px) scale(0.95)';
+            setTimeout(() => node.remove(), 2000);
+        }, 10000); // 10 secondes
+    }
+}
+
+// --- 7. TYPING INDICATOR ---
+
 let typingTimeout = null;
 function notifyTyping() {
     if (peerController) {
@@ -262,6 +366,7 @@ function notifyTyping() {
 
 function showTypingIndicator(name) {
     const bar = document.getElementById('typing-indicator');
+    if (!bar) return;
     bar.textContent = `${name} est en train d'écrire...`;
     bar.classList.remove('opacity-0');
     clearTimeout(typingTimeout);
