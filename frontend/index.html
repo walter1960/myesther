@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html class="dark" lang="en"><head>
+<html lang="fr"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>MyEsther</title>
@@ -84,19 +84,18 @@
             },
         }
     </script>
-<style>
-        body { font-family: 'Nunito', sans-serif; background-color: #0e0e0f; color: #ffffff; }
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #ffffff; color: #1a1a1b; }
         * { color: inherit; }
-        input, textarea { color: #ffffff !important; }
-        :root { --joy-emoji-size: 1.4rem; }
-        .glass { background: rgba(26, 25, 27, 0.7); backdrop-filter: blur(20px); }
+        input, textarea { color: #1a1a1b !important; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); }
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .neon-glow:hover { box-shadow: 0 0 15px rgba(191, 0, 255, 0.6); }
+        .neon-glow:hover { box-shadow: 0 0 15px rgba(191, 0, 255, 0.2); }
         .pulse-tertiary { box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(143, 245, 255, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0); } }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #0e0e0f; }
-        ::-webkit-scrollbar-thumb { background: #2c2c2d; border-radius: 10px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f4f4f5; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 10px; }
     </style>
 <style>
     body {
@@ -104,28 +103,28 @@
     }
   </style>
   </head>
-<body class="bg-surface overflow-hidden">
+<body class="bg-white overflow-hidden text-zinc-900">
 <!-- SETUP SCREEN -->
 <main class="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" id="setup-screen">
 <!-- Background Asset -->
-<div class="fixed inset-0 z-[-1] opacity-20 pointer-events-none overflow-hidden">
-<div class="absolute top-1/4 -left-1/4 w-[800px] h-[800px] bg-primary-dim/20 rounded-full blur-[120px]"></div>
-<div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-tertiary/10 rounded-full blur-[120px]"></div>
+<div class="fixed inset-0 z-[-1] opacity-30 pointer-events-none overflow-hidden">
+<div class="absolute top-1/4 -left-1/4 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-tertiary/20 rounded-full blur-[120px]"></div>
 </div>
 <div class="w-full max-w-md space-y-12">
 <header class="text-center space-y-4">
-<div class="inline-block p-4 bg-surface-container-high rounded-2xl mb-4 shadow-lg shadow-primary/20">
-  <span class="text-5xl">💜</span>
+<div class="inline-block p-4 bg-zinc-100 rounded-3xl mb-4 shadow-xl border border-zinc-200">
+  <span class="text-6xl">💜</span>
 </div>
-<h1 class="text-5xl font-black text-white">MyEsther <span class="text-2xl">✨</span></h1>
-<p class="text-white/60 text-sm font-semibold" id="text-security">🔒 Niveau de Sécurité : Oméga</p>
+<h1 class="text-5xl font-black text-zinc-900">MyEsther ✨</h1>
+<p class="text-zinc-500 text-sm font-bold" id="text-security">🔒 NIVEAU DE SÉCURITÉ : OMÉGA</p>
 </header>
 <section class="space-y-6">
 <div class="group">
-<label class="block text-sm font-bold text-white mb-2 ml-1" id="text-secretlbl">🗝️ Secret Partagé</label>
+<label class="block text-sm font-bold text-zinc-700 mb-2 ml-1" id="text-secretlbl">🗝️ Secret Partagé</label>
 <div class="relative">
-<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-surface-container-lowest text-white px-5 py-4 focus:ring-0 focus:outline-none transition-all duration-300 border-b-2 border-transparent focus:border-primary placeholder:text-zinc-500 text-lg font-semibold" placeholder="Entrez votre clé secrète..." type="password"/>
-<span class="absolute right-4 top-1/2 -translate-y-1/2 text-2xl">🔑</span>
+<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-zinc-50 text-zinc-900 px-6 py-5 rounded-2xl border-2 border-zinc-100 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all placeholder:text-zinc-400 text-lg font-bold shadow-sm" placeholder="Entrez votre clé secrète..." type="password"/>
+<span class="absolute right-5 top-1/2 -translate-y-1/2 text-2xl">🔑</span>
 </div>
 </div>
 <button id="btn-establish" class="w-full bg-gradient-to-br from-primary to-primary-dim text-white font-extrabold py-5 text-lg tracking-wide rounded-xl shadow-[0_0_25px_rgba(191,0,255,0.4)] hover:shadow-[0_0_40px_rgba(191,0,255,0.6)] transition-all duration-500 active:scale-95 flex items-center justify-center gap-3" onclick="establishSecureTunnel()">
@@ -133,14 +132,14 @@
 </button>
 </section>
 <footer class="pt-6 text-center space-y-4">
-<div class="flex justify-center gap-6 text-xs text-white/50 font-bold">
+<div class="flex justify-center gap-6 text-xs text-zinc-400 font-black tracking-widest uppercase">
   <span>🛡️ AES-256</span>
   <span>🌐 P2P MESH</span>
   <span>🤫 NO-LOGS</span>
 </div>
 <!-- Panneau de personnalisation des thèmes -->
-<div class="mt-4">
-  <p class="text-white/40 text-xs font-semibold mb-3">🎨 Personnaliser la couleur</p>
+<div class="mt-6 flex flex-col items-center">
+  <p class="text-zinc-400 text-[10px] font-black tracking-widest uppercase mb-4">🎨 Choisis ton ambiance</p>
   <div class="flex justify-center gap-3" id="theme-picker">
     <button onclick="setCustomTheme('violet')" class="theme-btn w-8 h-8 rounded-full bg-[#e08dff] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💜 Violet (Défaut)"></button>
     <button onclick="setCustomTheme('green')" class="theme-btn w-8 h-8 rounded-full bg-[#00ff88] border-2 border-white/10 hover:scale-110 transition-transform shadow-lg" title="💚 Vert Matrix"></button>
@@ -155,16 +154,17 @@
 <!-- CHAT SCREEN (Hidden by default) -->
 <main class="hidden min-h-screen h-screen flex flex-col bg-surface" id="chat-screen">
 <!-- TopAppBar (From JSON Anchor) -->
-<header class="fixed top-0 w-full z-50 bg-zinc-950/70 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl flex justify-between items-center px-6 h-20 w-full border-b border-zinc-100">
 <div class="flex items-center gap-4">
-<div class="w-10 h-10 bg-surface-container-highest rounded-lg overflow-hidden flex items-center justify-center">
-<img alt="User Avatar" class="w-full h-full object-cover" data-alt="minimalist pixel art profile icon of a tactical operator with glowing goggles on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZ30F6isvrOuBpbJbUJVy_CwYb39d4PB2ucLTVQNZMDykpg09ahIujkFddfDU1FJYS1us3hBgxKEHod4Yj4Ep3c__aZP1mPwzW9DONfOrnL30sti8rtPqdMoLZdGUxMWb-N-70Bte9OGqc5f182wHaVFCLOtZmfcHiHMjrj4jfdANlb-rpH_I9wQWj36tfq5dKQTj3g_j3Et-OfRIgOtg-VPYOiTUPqIpegrdKU2ohp8T9lhM33X860OSIUmYxG9xJ5DSBqKNlgZI"/>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-zinc-100 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-zinc-200">
+  <span>💬</span>
 </div>
 <div>
-<h2 class="text-sm font-bold text-white">💬 MyEsther Chat</h2>
+<h2 class="text-base font-black text-zinc-900">MyEsther Chat</h2>
 <div class="flex items-center gap-1.5">
-<span class="w-2 h-2 rounded-full bg-tertiary pulse-tertiary"></span>
-<span class="text-[9px] uppercase tracking-widest text-white/60 font-bold">🔐 Chiffrement actif</span>
+<span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+<span class="text-[10px] uppercase tracking-widest text-zinc-500 font-black">🔐 Chiffrement Neural Actif</span>
 </div>
 </div>
 </div>
@@ -189,31 +189,28 @@
 <section class="flex-1 overflow-y-auto pt-24 pb-32 px-6 space-y-8">
 <!-- System Log -->
 <div class="flex justify-center">
-<span class="text-xs text-white/40 font-semibold bg-surface-container-low px-4 py-2 rounded-full">🤝 Connexion sécurisée établie !</span>
+<span class="text-xs text-zinc-400 font-black tracking-widest uppercase bg-zinc-100 px-5 py-2.5 rounded-full">🤝 Tunnel Sécurisé Établi</span>
 </div>
 <!-- Received Message -->
-<div class="flex flex-col items-start max-w-[80%] space-y-1">
-<div class="bg-surface-container-low p-4 rounded-2xl rounded-tl-none relative overflow-hidden">
-<div class="absolute top-0 left-0 w-1 h-full bg-primary/50"></div>
-<p class="text-sm leading-relaxed text-white font-medium">Salut ! 👋 Tu es connecté(e) ! On peut parler en toute sécurité ici. 😊</p>
+<div class="flex flex-col items-start max-w-[85%] space-y-1">
+<div class="bg-zinc-50 p-5 rounded-3xl rounded-tl-none border border-zinc-100 shadow-sm">
+<p class="text-sm leading-relaxed text-zinc-800 font-bold">Salut ! 👋 Tu es maintenant connecté(e) en toute sécurité. 😊</p>
 </div>
-<span class="text-[10px] text-white/30 font-semibold ml-1">14:02:44</span>
+<span class="text-[10px] text-zinc-300 font-bold ml-2">14:02:44</span>
 </div>
 <!-- Sent Message (Decryption Simulation logic) -->
-<div class="flex flex-col items-end self-end max-w-[80%] space-y-1">
-<div class="bg-primary/20 p-4 rounded-2xl rounded-tr-none border border-primary/30 relative overflow-hidden">
-<div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
-<p class="text-sm leading-relaxed text-white font-medium">Super ! Je suis là. On est bien protégés 🔒🎉</p>
+<div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
+<div class="bg-gradient-to-br from-primary to-primary-dim p-5 rounded-3xl rounded-tr-none shadow-lg shadow-primary/20">
+<p class="text-sm leading-relaxed text-white font-black">Génial ! Je suis là. On peut commencer 🔒✨</p>
 </div>
-<span class="text-[10px] text-white/30 font-semibold mr-1">14:05:12</span>
+<span class="text-[10px] text-zinc-300 font-bold mr-2">14:05:12</span>
 </div>
 <!-- Received Message -->
-<div class="flex flex-col items-start max-w-[80%] space-y-1">
-<div class="bg-surface-container-low p-4 rounded-2xl rounded-tl-none relative overflow-hidden">
-<div class="absolute top-0 left-0 w-1 h-full bg-primary/50"></div>
-<p class="text-sm leading-relaxed text-white font-medium">Même si quelqu'un écoute, il ne comprendra rien 😂🛡️ C'est la magie de MyEsther !</p>
+<div class="flex flex-col items-start max-w-[85%] space-y-1">
+<div class="bg-zinc-50 p-5 rounded-3xl rounded-tl-none border border-zinc-100 shadow-sm">
+<p class="text-sm leading-relaxed text-zinc-800 font-bold">C'est parfait 😂🛡️ La connexion est crypographique et anonyme.</p>
 </div>
-<span class="text-[10px] text-white/30 font-semibold ml-1">14:05:59</span>
+<span class="text-[10px] text-zinc-300 font-bold ml-2">14:05:59</span>
 </div>
 <!-- Image Transmission -->
 <div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
@@ -230,16 +227,14 @@
 </div>
 </section>
 <!-- Footer Input Section -->
-<footer class="fixed bottom-0 left-0 w-full p-4 bg-zinc-950/80 backdrop-blur-2xl border-t border-fuchsia-500/10 z-50">
-<div class="max-w-4xl mx-auto flex items-center gap-3">
-<div class="flex-1 bg-surface-container-lowest rounded-xl px-4 py-3 flex items-center gap-3">
-<span class="text-xl">😊</span>
-<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-base text-white font-semibold placeholder:text-zinc-500" placeholder="Votre message..." type="text"/>
+<footer class="fixed bottom-0 left-0 w-full p-5 bg-white/90 backdrop-blur-2xl border-t border-zinc-100 z-50">
+<div class="max-w-4xl mx-auto flex items-center gap-4">
+<div class="flex-1 bg-zinc-50 rounded-2xl px-5 py-4 flex items-center gap-4 border border-zinc-100 shadow-inner">
+<span class="text-2xl">😊</span>
+<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-base text-zinc-900 font-black placeholder:text-zinc-400" placeholder="Tape ton message ici..." type="text"/>
 </div>
-<button onclick="sendSecureMessage()" class="bg-primary text-on-primary-fixed p-3 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-[0_0_20px_rgba(191,0,255,0.4)] active:scale-90 group relative overflow-hidden">
-<span class="material-symbols-outlined group-hover:animate-pulse" data-icon="send">send</span>
-<!-- Glitch Overlay effect simulated via absolute div -->
-<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-10 pointer-events-none"></div>
+<button onclick="sendSecureMessage()" class="bg-primary text-white p-4 rounded-2xl flex items-center justify-center shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined font-black" data-icon="send">send</span>
 </button>
 </div>
 </footer>
