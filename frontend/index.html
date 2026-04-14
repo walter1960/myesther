@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MyEsther</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#e08dff"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script src="js/urya_brain.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#8ff5ff",
+                        "secondary-fixed": "#e5e2e1",
+                        "surface-tint": "#e08dff",
+                        "secondary-container": "#474746",
+                        "primary-fixed-dim": "#d160ff",
+                        "on-secondary-fixed": "#403f3f",
+                        "on-primary-container": "#3d0055",
+                        "surface-variant": "#262627",
+                        "secondary-dim": "#d6d4d3",
+                        "tertiary-fixed-dim": "#00deec",
+                        "on-primary": "#4f006c",
+                        "surface-bright": "#2c2c2d",
+                        "error-container": "#a70138",
+                        "primary-fixed": "#d978ff",
+                        "on-secondary-container": "#d2d0cf",
+                        "on-secondary-fixed-variant": "#5c5b5b",
+                        "surface-container-highest": "#262627",
+                        "primary-container": "#d978ff",
+                        "surface-container": "#1a191b",
+                        "inverse-on-surface": "#565556",
+                        "tertiary-fixed": "#00eefc",
+                        "inverse-surface": "#fcf8f9",
+                        "surface-container-lowest": "#000000",
+                        "secondary-fixed-dim": "#d6d4d3",
+                        "primary-dim": "#bc00fb",
+                        "surface-dim": "#0e0e0f",
+                        "on-tertiary-fixed": "#003f43",
+                        "on-tertiary": "#005d63",
+                        "on-tertiary-container": "#005359",
+                        "on-error-container": "#ffb2b9",
+                        "on-tertiary-fixed-variant": "#005e64",
+                        "tertiary-dim": "#00deec",
+                        "on-error": "#490013",
+                        "surface-container-low": "#131314",
+                        "on-background": "#ffffff",
+                        "secondary": "#e5e2e1",
+                        "primary": "#e08dff",
+                        "on-surface-variant": "#adaaab",
+                        "outline-variant": "#484849",
+                        "surface": "#0e0e0f",
+                        "on-primary-fixed-variant": "#4c0068",
+                        "on-secondary": "#525151",
+                        "on-surface": "#ffffff",
+                        "background": "#0e0e0f",
+                        "error": "#ff6e84",
+                        "error-dim": "#d73357",
+                        "inverse-primary": "#9a00cf",
+                        "tertiary-container": "#00eefc",
+                        "surface-container-high": "#201f21",
+                        "on-primary-fixed": "#000000",
+                        "outline": "#767576"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Space Grotesk"],
+                        "label": ["Space Grotesk"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #0e0e0f; color: #ffffff; }
+        .glass { background: rgba(26, 25, 27, 0.7); backdrop-filter: blur(20px); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .neon-glow:hover { box-shadow: 0 0 15px rgba(191, 0, 255, 0.6); }
+        .pulse-tertiary { box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(143, 245, 255, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 245, 255, 0); } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0e0e0f; }
+        ::-webkit-scrollbar-thumb { background: #2c2c2d; border-radius: 10px; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface overflow-hidden">
+<!-- SETUP SCREEN -->
+<main class="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" id="setup-screen">
+<!-- Background Asset -->
+<div class="fixed inset-0 z-[-1] opacity-20 pointer-events-none overflow-hidden">
+<div class="absolute top-1/4 -left-1/4 w-[800px] h-[800px] bg-primary-dim/20 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 -right-1/4 w-[600px] h-[600px] bg-tertiary/10 rounded-full blur-[120px]"></div>
+</div>
+<div class="w-full max-w-md space-y-12">
+<header class="text-center space-y-2">
+<div class="inline-block p-3 bg-surface-container-high rounded-lg mb-4">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="shield_lock">shield_lock</span>
+</div>
+<h1 class="text-4xl font-bold tracking-tighter uppercase text-white"><span class="text-primary-fixed">MyEsther</span></h1>
+<p class="text-on-surface-variant text-sm tracking-[0.2em] uppercase" id="text-security">Niveau de Sécurité : Oméga</p>
+</header>
+<section class="space-y-6">
+<div class="group">
+<label class="block text-xs font-bold uppercase tracking-widest text-primary mb-2 ml-1" id="text-secretlbl">Secret Partagé</label>
+<div class="relative">
+<input id="secret-input" autofocus autocapitalize="none" autocomplete="off" class="w-full bg-surface-container-lowest text-white px-5 py-4 focus:ring-0 focus:outline-none transition-all duration-300 border-b-2 border-transparent focus:border-primary-dim placeholder:text-zinc-700 tracking-[0.2em]" placeholder="SAISISSEZ LA CLÉ DE CHIFFREMENT" type="password"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-zinc-600" data-icon="fingerprint">fingerprint</span>
+</div>
+</div>
+<button id="btn-establish" class="w-full bg-gradient-to-br from-primary to-primary-dim text-on-primary-fixed font-bold py-5 uppercase tracking-widest shadow-[0_0_20px_rgba(191,0,255,0.3)] hover:shadow-[0_0_35px_rgba(191,0,255,0.5)] transition-all duration-500 active:scale-95 flex items-center justify-center gap-3" onclick="establishSecureTunnel()">
+                    ÉTABLIR LE TUNNEL SÉCURISÉ
+                    <span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+</button>
+</section>
+<footer class="pt-8 text-center">
+<div class="flex justify-center gap-8 text-[10px] text-zinc-600 font-bold tracking-widest uppercase">
+<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> AES-256</span>
+<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> P2P MESH</span>
+<span class="flex items-center gap-1"><span class="w-1 h-1 bg-tertiary rounded-full"></span> NO-LOGS</span>
+</div>
+</footer>
+</div>
+</main>
+<!-- CHAT SCREEN (Hidden by default) -->
+<main class="hidden min-h-screen h-screen flex flex-col bg-surface" id="chat-screen">
+<!-- TopAppBar (From JSON Anchor) -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/70 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-surface-container-highest rounded-lg overflow-hidden flex items-center justify-center">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="minimalist pixel art profile icon of a tactical operator with glowing goggles on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZ30F6isvrOuBpbJbUJVy_CwYb39d4PB2ucLTVQNZMDykpg09ahIujkFddfDU1FJYS1us3hBgxKEHod4Yj4Ep3c__aZP1mPwzW9DONfOrnL30sti8rtPqdMoLZdGUxMWb-N-70Bte9OGqc5f182wHaVFCLOtZmfcHiHMjrj4jfdANlb-rpH_I9wQWj36tfq5dKQTj3g_j3Et-OfRIgOtg-VPYOiTUPqIpegrdKU2ohp8T9lhM33X860OSIUmYxG9xJ5DSBqKNlgZI"/>
+</div>
+<div>
+<h2 class="text-sm font-bold tracking-tight font-['Space_Grotesk'] text-white">OPERATOR_X</h2>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-tertiary pulse-tertiary"></span>
+<span class="text-[9px] uppercase tracking-widest text-tertiary font-bold">Neural Encryption Active</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-zinc-500 hover:text-fuchsia-300 transition-colors duration-300">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<button class="text-zinc-500 hover:text-fuchsia-300 transition-colors duration-300">
+<span class="material-symbols-outlined" data-icon="shield_lock">shield_lock</span>
+</button>
+<!-- LANGUAGE TOGGLE BUTTON -->
+<button onclick="toggleLanguage()" class="text-zinc-500 hover:text-primary transition-colors duration-300 ml-2" title="Switch Language EN/FR">
+<span id="lang-ind" class="text-xs font-bold border border-zinc-500 rounded px-1">FR</span>
+</button>
+<!-- THEME TOGGLE BUTTON -->
+<button onclick="toggleTheme()" class="text-zinc-500 hover:text-tertiary transition-colors duration-300 ml-2" title="Switch Theme">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+</button>
+</div>
+</header>
+<!-- Chat Canvas -->
+<section class="flex-1 overflow-y-auto pt-24 pb-32 px-6 space-y-8">
+<!-- System Log -->
+<div class="flex justify-center">
+<span class="text-[10px] uppercase tracking-[0.3em] text-zinc-600 bg-surface-container-low px-4 py-1 rounded-full">Handshake established via node-772</span>
+</div>
+<!-- Received Message -->
+<div class="flex flex-col items-start max-w-[80%] space-y-1">
+<div class="bg-surface-container-low text-on-surface-variant p-4 rounded-lg rounded-tl-none relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-zinc-700"></div>
+<p class="text-sm leading-relaxed">Status check. Have you reached the perimeter coordinates? The signal is weak in sector 4.</p>
+</div>
+<span class="text-[9px] uppercase text-zinc-600 ml-1">14:02:44</span>
+</div>
+<!-- Sent Message (Decryption Simulation logic) -->
+<div class="flex flex-col items-end self-end max-w-[80%] space-y-1">
+<div class="bg-primary-container/10 text-primary-fixed p-4 rounded-lg rounded-tr-none border border-primary/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
+<!-- HEX to Text Animation Placeholder -->
+<p class="text-sm leading-relaxed font-mono">
+<span class="text-primary-dim">68 65 78 5f 64 61 74 61 5f 70 61 63 6b 65 74</span><br/>
+<span class="text-white opacity-90">In position. Waiting for the uplink to stabilize. Perimeter is clear.</span>
+</p>
+</div>
+<span class="text-[9px] uppercase text-zinc-600 mr-1">14:05:12</span>
+</div>
+<!-- Received Message -->
+<div class="flex flex-col items-start max-w-[80%] space-y-1">
+<div class="bg-surface-container-low text-on-surface-variant p-4 rounded-lg rounded-tl-none relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-zinc-700"></div>
+<p class="text-sm leading-relaxed">Understood. Initiating phase 2. Keep the line open. <span class="text-tertiary">#SecureStream</span></p>
+</div>
+<span class="text-[9px] uppercase text-zinc-600 ml-1">14:05:59</span>
+</div>
+<!-- Image Transmission -->
+<div class="flex flex-col items-end self-end max-w-[85%] space-y-1">
+<div class="bg-surface-container-high p-1 rounded-lg border border-primary/10 overflow-hidden shadow-2xl">
+<img alt="Encrypted Image" class="rounded-lg grayscale opacity-70" data-alt="cyberpunk futuristic dark cityscape at night with neon purple and cyan lights reflecting on wet pavement and fog" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQICPcIYvm3UVy2qpHuW12U_OeI9fZeVS7nboHDC650sekFpVx0MEp3mTdx5Yh3QkjJ7s9VzWQYvFhhzLt0GM1VAetCy0yi-kO2V1geqBkzeu2UrV7tiISKIQuj6J0T23Jt_NvEMwNrHK1fc5jDEbf9VxHBRu3oycEMNQLc4XVX8vTeRzW1h2MsRi4CQyAe1GPHrP5Xf3GGBAvEB8jln3oOCjq0POZMclHcOAdq_xJ5OfEmjV8ucP9sfdH0a2w1FhoIKI7a6yyClg"/>
+<div class="p-3 bg-zinc-950/50 backdrop-blur-md -mt-12 relative z-10">
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-mono text-primary">SCAN_RESULTS_22.IMG</span>
+<span class="material-symbols-outlined text-xs text-primary" data-icon="download">download</span>
+</div>
+</div>
+</div>
+<span class="text-[9px] uppercase text-zinc-600 mr-1">14:06:30</span>
+</div>
+</section>
+<!-- Footer Input Section -->
+<footer class="fixed bottom-0 left-0 w-full p-4 bg-zinc-950/80 backdrop-blur-2xl border-t border-fuchsia-500/10 z-50">
+<div class="max-w-4xl mx-auto flex items-center gap-3">
+<div class="flex-1 bg-surface-container-lowest rounded-lg px-4 py-3 flex items-center gap-3 group">
+<span class="material-symbols-outlined text-zinc-600" data-icon="add_circle">add_circle</span>
+<input id="chat-input" class="bg-transparent border-none focus:ring-0 w-full text-sm placeholder:text-zinc-700" placeholder="Tapez un message chiffré..." type="text"/>
+</div>
+<button onclick="sendSecureMessage()" class="bg-primary text-on-primary-fixed p-3 rounded-lg flex items-center justify-center transition-all duration-300 hover:shadow-[0_0_20px_rgba(191,0,255,0.4)] active:scale-90 group relative overflow-hidden">
+<span class="material-symbols-outlined group-hover:animate-pulse" data-icon="send">send</span>
+<!-- Glitch Overlay effect simulated via absolute div -->
+<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-10 pointer-events-none"></div>
+</button>
+</div>
+</footer>
+<!-- BottomNavBar (Hidden on desktop as per rules, visible for mobile logic) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-4 pointer-events-none">
+<!-- Navigation buttons would go here but shell rules indicate suppression on focused transactional/task screens -->
+</nav>
+</main>
+<!-- UI Interactions / Tooltips -->
+<div class="fixed top-20 right-6 z-[60] space-y-2 pointer-events-none">
+<div class="bg-surface-container-highest/90 backdrop-blur text-[9px] uppercase tracking-widest text-primary px-3 py-1.5 border-r-2 border-primary">
+            Buffer: 1024KB
+        </div>
+<div class="bg-surface-container-highest/90 backdrop-blur text-[9px] uppercase tracking-widest text-tertiary px-3 py-1.5 border-r-2 border-tertiary">
+            Uplink: STABLE
+        </div>
+</div>
+
+<script>
+    // --- INTELLIGENCE DE L'APPLICATION (PWA & STOCKAGE LOCAL) ---
+    
+    // 1. Service Worker pour Vitesse et Hors-Ligne
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then((registration) => {
+                console.log('[PWA] Service Worker injecté', registration.scope);
+            }, (err) => {
+                console.log('[PWA] Échec du Service Worker', err);
+            });
+        });
+    }
+
+    // 2. THEME SWAPPER LOGIC (VIOLET <-> VERT) + STOCKAGE
+    let isGreenTheme = localStorage.getItem('myesther_theme') === 'green';
+    let isEnglish = localStorage.getItem('myesther_lang') === 'en';
+    
+    // Dictionnaire i18n
+    const dict = {
+        'fr': {
+            'text-security': 'Niveau de Sécurité : Oméga',
+            'text-secretlbl': 'Secret Partagé',
+            'secret-input': 'SAISISSEZ LA CLÉ DE CHIFFREMENT',
+            'btn-establish': 'ÉTABLIR LE TUNNEL SÉCURISÉ',
+            'chat-placeholder': 'Tapez un message chiffré...',
+            'lang-ind': 'FR'
+        },
+        'en': {
+            'text-security': 'Security Level: Omega',
+            'text-secretlbl': 'Shared Secret',
+            'secret-input': 'ENTER ENCRYPTION KEY',
+            'btn-establish': 'ESTABLISH SECURE TUNNEL',
+            'chat-placeholder': 'Type an encrypted message...',
+            'lang-ind': 'EN'
+        }
+    };
+
+    function applyLanguage() {
+        const lang = isEnglish ? 'en' : 'fr';
+        document.getElementById('text-security').innerText = dict[lang]['text-security'];
+        document.getElementById('text-secretlbl').innerText = dict[lang]['text-secretlbl'];
+        document.getElementById('secret-input').placeholder = dict[lang]['secret-input'];
+        
+        const btnNode = document.getElementById('btn-establish');
+        btnNode.innerHTML = dict[lang]['btn-establish'] + ' <span class="material-symbols-outlined" data-icon="bolt">bolt</span>';
+        document.querySelector('#chat-input').placeholder = dict[lang]['chat-placeholder'];
+        document.getElementById('lang-ind').innerText = dict[lang]['lang-ind'];
+    }
+
+    function toggleLanguage() {
+        isEnglish = !isEnglish;
+        localStorage.setItem('myesther_lang', isEnglish ? 'en' : 'fr');
+        applyLanguage();
+    }
+
+    function applyTheme() {
+        if (isGreenTheme) {
+            // GREEN THEME (Mode Matrice)
+            tailwind.config.theme.extend.colors['primary'] = '#00ff88'; // Neon Green
+            tailwind.config.theme.extend.colors['primary-dim'] = '#00cc6a';
+            tailwind.config.theme.extend.colors['primary-fixed'] = '#8affc2';
+            tailwind.config.theme.extend.colors['surface-tint'] = '#00ff88';
+            tailwind.config.theme.extend.colors['tertiary'] = '#ff00ff';
+            
+            document.body.style.setProperty('--color-primary', '#00ff88');
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#00ff88");
+            document.documentElement.style.setProperty('--tw-text-opacity', '1');
+        } else {
+            // VIOLET THEME (MyEsther Default)
+            tailwind.config.theme.extend.colors['primary'] = '#e08dff';
+            tailwind.config.theme.extend.colors['primary-dim'] = '#bc00fb';
+            tailwind.config.theme.extend.colors['primary-fixed'] = '#d978ff';
+            tailwind.config.theme.extend.colors['surface-tint'] = '#e08dff';
+            tailwind.config.theme.extend.colors['tertiary'] = '#8ff5ff';
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#e08dff");
+        }
+    }
+
+    function toggleTheme() {
+        isGreenTheme = !isGreenTheme;
+        localStorage.setItem('myesther_theme', isGreenTheme ? 'green' : 'violet');
+        applyTheme();
+    }
+
+    // Charger l'intelligence sauvegardée depuis le cache du mobile
+    document.addEventListener("DOMContentLoaded", () => {
+        applyLanguage();
+        applyTheme();
+    });
+</script>
+</body></html>
