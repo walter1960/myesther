@@ -1,5 +1,5 @@
 // MyEsther Service Worker (Caching Engine)
-const CACHE_NAME = 'myesther-smart-cache-v18';
+const CACHE_NAME = 'myesther-smart-cache-v19';
 
 const ASSETS_TO_CACHE = [
   '/',

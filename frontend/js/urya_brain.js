@@ -319,13 +319,23 @@ async function establishSecureTunnel() {
             let typing = document.getElementById('typing-indicator');
             if (canvas) {
                 canvas.innerHTML = '';
-                if (!typing) {
-                    typing = document.createElement('div');
-                    typing.id = 'typing-indicator';
-                    typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
-                    typing.textContent = "Contact est en train d'écrire...";
-                }
+                
+                // Welcome badge
+                const badgeContainer = document.createElement('div');
+                badgeContainer.className = 'flex justify-center mb-4 mt-2';
+                badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge">✅ Tunnel Sécurisé Etabli</span>`;
+                canvas.appendChild(badgeContainer);
+
+                // Typing indicator
+                let typing = document.createElement('div');
+                typing.id = 'typing-indicator';
+                typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
+                typing.textContent = "Contact est en train d'écrire...";
                 canvas.appendChild(typing);
+                
+                if (history.length === 0) {
+                    appendMessage("Bonjour ! Vous êtes connecté(e) en toute sécurité. Vos messages sont chiffrés et transmis sans trace.", 'received', false, Date.now(), false, 'Système');
+                }
             }
 
             for (const m of history) {
@@ -866,8 +876,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function hapticFeedback(style) {
     if (!navigator.vibrate) return;
-    if (style === 'light') navigator.vibrate(10);
-    else if (style === 'medium') navigator.vibrate([15, 30, 15]);
-    else if (style === 'heavy') navigator.vibrate([40, 60, 40]);
+    // Vibrations très nettes type iOS ("Haptic Engine")
+    if (style === 'light') navigator.vibrate(12); // Tap rapide et précis (envoi)
+    else if (style === 'medium') navigator.vibrate([15, 40, 15]); // Double tap subtil (réception)
+    else if (style === 'heavy') navigator.vibrate([20, 30, 20, 30, 30]); // Action forte (quitter/erreur)
+    else if (style === 'success') navigator.vibrate([10, 30, 20]); // Réponse douce
 }
 
