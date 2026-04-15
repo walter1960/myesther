@@ -219,6 +219,7 @@ let storageEngine = null;
 let peerController = null;
 let socket = null;
 let currentSecret = "";
+let currentAlias = "Anonyme";
 let currentSendMode = 'normal'; // 'normal' ou 'burn'
 let ghostTimer = null;
 let panicClicks = 0;
@@ -227,6 +228,8 @@ let holdTimer = null;
 
 async function establishSecureTunnel() {
     currentSecret = document.getElementById('secret-input').value;
+    currentAlias = document.getElementById('alias-input').value.trim() || "Anonyme";
+    
     if (!currentSecret || currentSecret.length < 4) {
         alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
         return;
@@ -277,7 +280,15 @@ async function establishSecureTunnel() {
 
     socket.on('encrypted_payload', (data) => {
         // Fallback si WebRTC n'est pas encore prêt
-        receivePayload({ type: 'msg', content: data });
+        receivePayload(data);
+    });
+
+    socket.on('room_update', (data) => {
+        const counter = document.getElementById('member-counter');
+        if (counter) {
+            const label = (window.isEnglish ? "members" : "membres");
+            counter.textContent = `${data.member_count} ${label}`;
+        }
     });
 }
 
@@ -357,6 +368,7 @@ async function sendSecureMessage() {
     const payload = { 
         type: 'msg', 
         content: encryptedData, 
+        sender: currentAlias,
         ttl: currentSendMode === 'burn' ? 10 : (24 * 3600), // 10s ou 24H
         burn: currentSendMode === 'burn'
     };
@@ -369,10 +381,10 @@ async function sendSecureMessage() {
 
     // Sauvegarde locale
     if (storageEngine) {
-        storageEngine.saveMessage({ ...payload, sender: 'me' });
+        storageEngine.saveMessage({ ...payload, sender_name: 'me' });
     }
 
-    appendMessage(text, 'sent', false, Date.now(), currentSendMode === 'burn');
+    appendMessage(text, 'sent', false, Date.now(), currentSendMode === 'burn', 'me');
     input.value = '';
     
     // Reset mode après envoi burn
@@ -385,10 +397,10 @@ async function receivePayload(payload) {
         if (decryptedContent) {
             // Sauvegarde locale
             if (storageEngine) {
-                storageEngine.saveMessage({ ...payload, sender: 'them' });
+                storageEngine.saveMessage({ ...payload, sender_name: payload.sender || 'them' });
             }
 
-            appendMessage(decryptedContent, 'received', payload.type === 'img', Date.now(), payload.burn);
+            appendMessage(decryptedContent, 'received', payload.type === 'img', Date.now(), payload.burn, payload.sender || 'them');
             if (window.pushNotification) window.pushNotification();
         }
     } else if (payload.type === 'typing') {
@@ -470,7 +482,7 @@ function toggleAutoDestruct() {
 
 // --- 6. UI UPDATE (MESSAGES) ---
 
-function appendMessage(content, type, isImage = false, timestamp = Date.now(), burnOnRead = false) {
+function appendMessage(content, type, isImage = false, timestamp = Date.now(), burnOnRead = false, senderName = '') {
     const canvas = document.getElementById('chat-canvas');
     const time = new Date(timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
     const node = document.createElement('div');
@@ -504,7 +516,9 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
             <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '🔥' : ''}</span>`;
     } else {
         node.className = 'flex flex-col items-start max-w-[82%] space-y-1 mb-4';
+        const senderLabel = senderName && senderName !== 'them' ? `<span class="text-[9px] font-black text-brand uppercase ml-2 mb-0.5 block">${senderName}</span>` : '';
         node.innerHTML = `
+            ${senderLabel}
             <div class="bubble-recv px-4 py-3">
                ${body}
             </div>

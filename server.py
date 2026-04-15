@@ -47,8 +47,9 @@ def handle_disconnect():
         room = active_users[request.sid]['room']
         del active_users[request.sid]
         print(f"❌ [Déconnexion] Client {request.sid} a quitté le salon {room}.")
-        # Optionnel: Notifier l'autre l'utilisateur que son contact est déconnecté
+        # Notifier tout le monde du nouveau compte
         if room:
+            update_room_count(room)
             emit('system_message', {'type': 'disconnect', 'status': 'Contact offline'}, room=room)
 
 @socketio.on('join_secure_channel')
@@ -63,17 +64,34 @@ def handle_join(data):
         return
         
     # ROUTAGE DU CANAL DÉRIVÉ : Hachage SHA-256 pour l'ID du Salon
-    # On prend les 12 premiers caractères hexadécimaux pour le nom du salon
     room_id = hashlib.sha256(raw_password.encode('utf-8')).hexdigest()[:12]
     
+    # Vérification de limite (ex: 20 membres)
+    members = 0
+    for u in active_users.values():
+        if u.get('room') == room_id:
+            members += 1
+    
+    if members >= 20:
+        emit('system_message', {'type': 'error', 'status': 'Tunnel complet (max 20)'})
+        return
+
     join_room(room_id)
     active_users[request.sid]['room'] = room_id
     
-    print(f"🔒 [Canal Établi] Un client a rejoint le salon dérivé: {room_id}")
+    print(f"🔒 [Canal Établi] Client {request.sid} rejoint: {room_id} ({members+1} membres)")
     
-    # Notifier tous ceux dans la salle qu'une nouvelle connexion est active.
-    # Ceci n'envoie aucune information sécurisée, juste un ping de présence.
+    # Mise à jour du compteur pour tout le monde
+    update_room_count(room_id)
     emit('system_message', {'type': 'success', 'status': 'Connected to Secure Tunnel'}, room=room_id)
+
+def update_room_count(room_id):
+    """Calcule et diffuse le nombre d'utilisateurs actifs dans un salon"""
+    count = 0
+    for u in active_users.values():
+        if u.get('room') == room_id:
+            count += 1
+    emit('room_update', {'member_count': count}, room=room_id)
 
 @socketio.on('encrypted_payload')
 def handle_encrypted_message(payload_data):
