@@ -231,110 +231,129 @@ let holdTimer = null;
 let sessionTimer = null;
 
 async function establishSecureTunnel() {
-    const secretEl = document.getElementById('secret-input');
-    const aliasEl = document.getElementById('alias-input');
-    const groupNameEl = document.getElementById('group-name-input');
-    const groupTtlEl = document.getElementById('group-ttl-input');
-
-    currentSecret = secretEl ? secretEl.value : "";
-    currentAlias = (aliasEl ? aliasEl.value.trim() : "") || "Anonyme";
-    currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "MyEsther Group";
-    currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
-    
-    if (!currentSecret || currentSecret.length < 4) {
-        alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
-        const btn = document.getElementById('btn-establish');
+    const btn = document.getElementById('btn-establish');
+    const resetBtn = () => {
         if (btn) {
-           btn.innerHTML = window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé";
-           btn.disabled = false;
+            btn.innerHTML = window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé";
+            btn.disabled = false;
         }
-        return;
-    }
+    };
 
-    // Calcul de l'expiration locale si TTL > 0
-    if (currentTTL > 0) {
-        expiryDate = Date.now() + (currentTTL * 1000);
-        startSessionTimer();
-    }
+    try {
+        const secretEl = document.getElementById('secret-input');
+        const aliasEl = document.getElementById('alias-input');
+        const groupNameEl = document.getElementById('group-name-input');
+        const groupTtlEl = document.getElementById('group-ttl-input');
 
-    // Mise à jour header immédiate
-    const headerName = document.getElementById('active-group-name');
-    if (headerName) headerName.textContent = currentGroupName;
-
-    // A. Dérivation de clé Haute Sécurité
-    await cryptoEngine.deriveKey(currentSecret);
-    
-    // B. Initialisation du stockage isolé (Déni Plausible)
-    const dbId = await cryptoEngine.hashSecret(currentSecret);
-    storageEngine = new URYAStorage(dbId);
-    await storageEngine.init();
-
-    // C. Connexion Socket IO (Signaling)
-    socket = io({ transports: ['websocket'] });
-
-    socket.on('connect', async () => {
-        socket.emit('join_secure_channel', { shared_secret: currentSecret });
+        currentSecret = secretEl ? secretEl.value : "";
+        currentAlias = (aliasEl ? aliasEl.value.trim() : "") || "Anonyme";
+        currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "MyEsther Group";
+        currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
         
-        // Initialiser le P2P
-        peerController = new URYAPeer(receivePayload, updateP2PStatus);
-        peerController.init(socket);
+        if (!currentSecret || currentSecret.length < 4) {
+            alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
+            resetBtn();
+            return;
+        }
+
+        // A. Dérivation de clé Haute Sécurité
+        console.log("🛠️ [CRYPTO] Dérivation en cours...");
+        await cryptoEngine.deriveKey(currentSecret);
         
-        // Charger l'historique
-        const history = await storageEngine.loadMessages();
-        const canvas = document.getElementById('chat-canvas');
-        // Nettoyer le canvas avant de charger (sauf indicateur de frappe)
-        let typing = document.getElementById('typing-indicator');
-        canvas.innerHTML = '';
-        if (!typing) {
-            typing = document.createElement('div');
-            typing.id = 'typing-indicator';
-            typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
-            typing.textContent = "Contact est en train d'écrire...";
-        }
-        canvas.appendChild(typing);
+        // B. Initialisation du stockage isolé
+        const dbId = await cryptoEngine.hashSecret(currentSecret);
+        storageEngine = new URYAStorage(dbId);
+        await storageEngine.init();
 
-        for (const m of history) {
-            const dec = await cryptoEngine.decrypt(m.content);
-            if (dec) appendMessage(dec, m.sender === 'me' ? 'sent' : 'received', false, m.timestamp);
-        }
+        // C. Connexion Socket IO
+        console.log("🌐 [NET] Connexion au serveur...");
+        // On permet polling si websocket échoue (plus robuste)
+        socket = io({ transports: ['websocket', 'polling'], reconnectionAttempts: 3 });
 
-        // On tente de démarrer le P2P (Alice envoie l'offre)
-        peerController.startP2P();
+        // Timeout de sécurité (si pas de connect en 10s)
+        const connTimeout = setTimeout(() => {
+            if (!socket.connected) {
+                alert("⌛ Délai de connexion dépassé. Vérifiez votre réseau.");
+                resetBtn();
+                socket.disconnect();
+            }
+        }, 10000);
 
-        // Broadcast des paramètres aux nouveaux arrivants (Handshake)
-        setTimeout(async () => {
-            const handshake = await cryptoEngine.encrypt(JSON.stringify({
-                groupName: currentGroupName,
-                ttl: currentTTL,
-                expiry: expiryDate
-            }));
-            socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
-        }, 1000);
+        socket.on('connect', async () => {
+            clearTimeout(connTimeout);
+            console.log("✅ [NET] Connecté !");
+            
+            // Calcul de l'expiration locale si TTL > 0
+            if (currentTTL > 0) {
+                expiryDate = Date.now() + (currentTTL * 1000);
+                startSessionTimer();
+            }
 
-        // UI Transition
-        document.dispatchEvent(new Event('myesther:connected'));
-        saveToHistory(currentSecret);
-    });
+            if (document.getElementById('active-group-name')) {
+                document.getElementById('active-group-name').textContent = currentGroupName;
+            }
 
-    socket.on('webrtc_signal', (data) => {
-        peerController.handleSignal(data);
-    });
+            socket.emit('join_secure_channel', { shared_secret: currentSecret });
+            
+            peerController = new URYAPeer(receivePayload, updateP2PStatus);
+            peerController.init(socket);
+            
+            const history = await storageEngine.loadMessages();
+            const canvas = document.getElementById('chat-canvas');
+            let typing = document.getElementById('typing-indicator');
+            if (canvas) {
+                canvas.innerHTML = '';
+                if (!typing) {
+                    typing = document.createElement('div');
+                    typing.id = 'typing-indicator';
+                    typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
+                    typing.textContent = "Contact est en train d'écrire...";
+                }
+                canvas.appendChild(typing);
+            }
 
-    socket.on('encrypted_payload', (data) => {
-        if (data.type === 'handshake') {
-            handleHandshake(data.content);
-        } else {
-            receivePayload(data);
-        }
-    });
+            for (const m of history) {
+                const dec = await cryptoEngine.decrypt(m.content);
+                if (dec) appendMessage(dec, m.sender_name === 'me' ? 'sent' : 'received', false, m.timestamp, m.burn, m.sender_name);
+            }
 
-    socket.on('room_update', (data) => {
-        const counter = document.getElementById('member-counter');
-        if (counter) {
-            const label = (window.isEnglish ? "members" : "membres");
-            counter.textContent = `${data.member_count} ${label}`;
-        }
-    });
+            peerController.startP2P();
+
+            // Handshake
+            setTimeout(async () => {
+                const handshake = await cryptoEngine.encrypt(JSON.stringify({
+                    groupName: currentGroupName,
+                    ttl: currentTTL,
+                    expiry: expiryDate
+                }));
+                socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
+            }, 1000);
+
+            document.dispatchEvent(new Event('myesther:connected'));
+            saveToHistory(currentSecret);
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error("❌ Erreur Socket:", err);
+            alert("Erreur de connexion au serveur.");
+            resetBtn();
+        });
+
+        socket.on('webrtc_signal', (data) => peerController.handleSignal(data));
+        socket.on('encrypted_payload', (data) => (data.type === 'handshake' ? handleHandshake(data.content) : receivePayload(data)));
+        socket.on('room_update', (data) => {
+            const counter = document.getElementById('member-counter');
+            if (counter) {
+                const label = (window.isEnglish ? "members" : "membres");
+                counter.textContent = `${data.member_count} ${label}`;
+            }
+        });
+
+    } catch (error) {
+        console.error("💥 CRASH au démarrage:", error);
+        alert("Une erreur critique est survenue. Veuillez rafraîchir.");
+        resetBtn();
+    }
 }
 
 function leaveSecureTunnel() {

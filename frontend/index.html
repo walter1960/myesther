@@ -595,9 +595,25 @@
   const _original = window.establishSecureTunnel;
   window.establishSecureTunnel = async function() {
     const btn = document.getElementById('btn-establish');
+    if (!btn) return;
+    
+    // Sauvegarder l'état original au cas où
+    const originalHTML = btn.innerHTML;
+    
     btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
     btn.disabled = true;
-    await _original();
+
+    try {
+      if (typeof _original !== 'function') {
+        throw new Error("Moteur de sécurité non chargé. Rafraîchissez la page.");
+      }
+      await _original();
+    } catch (e) {
+      console.error("Patch Error:", e);
+      alert(e.message || "Erreur lors de l'établissement du tunnel.");
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }
   };
 
   // Redéfinir la transition après connexion socket
