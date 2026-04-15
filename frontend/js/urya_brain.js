@@ -33,6 +33,14 @@ class URYACrypto {
         console.log("✅ [CRYPTO] Clé AES-256 dérivée avec succès.");
     }
 
+    // Hashage du secret pour ID de base de données (Zero-Knowledge)
+    async hashSecret(secret) {
+        const msgUint8 = new TextEncoder().encode(secret);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     async encrypt(text) {
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encodedText = new TextEncoder().encode(text);
