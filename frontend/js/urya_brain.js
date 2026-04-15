@@ -220,20 +220,35 @@ let peerController = null;
 let socket = null;
 let currentSecret = "";
 let currentAlias = "Anonyme";
-let currentSendMode = 'normal'; // 'normal' ou 'burn'
+let currentGroupName = "MyEsther Group";
+let currentTTL = 0; // 0 = illimité
+let expiryDate = null;
+let currentSendMode = 'normal';
 let ghostTimer = null;
 let panicClicks = 0;
 let panicTimer = null;
 let holdTimer = null;
+let sessionTimer = null;
 
 async function establishSecureTunnel() {
     currentSecret = document.getElementById('secret-input').value;
     currentAlias = document.getElementById('alias-input').value.trim() || "Anonyme";
+    currentGroupName = document.getElementById('group-name-input').value.trim() || "MyEsther Group";
+    currentTTL = parseInt(document.getElementById('group-ttl-input').value);
     
     if (!currentSecret || currentSecret.length < 4) {
         alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
         return;
     }
+
+    // Calcul de l'expiration locale si TTL > 0
+    if (currentTTL > 0) {
+        expiryDate = Date.now() + (currentTTL * 1000);
+        startSessionTimer();
+    }
+
+    // Mise à jour header immédiate
+    document.getElementById('active-group-name').textContent = currentGroupName;
 
     // A. Dérivation de clé Haute Sécurité
     await cryptoEngine.deriveKey(currentSecret);
@@ -269,6 +284,16 @@ async function establishSecureTunnel() {
         // On tente de démarrer le P2P (Alice envoie l'offre)
         peerController.startP2P();
 
+        // Broadcast des paramètres aux nouveaux arrivants (Handshake)
+        setTimeout(async () => {
+            const handshake = await cryptoEngine.encrypt(JSON.stringify({
+                groupName: currentGroupName,
+                ttl: currentTTL,
+                expiry: expiryDate
+            }));
+            socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
+        }, 1000);
+
         // UI Transition
         document.dispatchEvent(new Event('myesther:connected'));
         saveToHistory(currentSecret);
@@ -279,8 +304,11 @@ async function establishSecureTunnel() {
     });
 
     socket.on('encrypted_payload', (data) => {
-        // Fallback si WebRTC n'est pas encore prêt
-        receivePayload(data);
+        if (data.type === 'handshake') {
+            handleHandshake(data.content);
+        } else {
+            receivePayload(data);
+        }
     });
 
     socket.on('room_update', (data) => {
@@ -305,48 +333,31 @@ function leaveSecureTunnel() {
         socket = null;
     }
 
+    // 3. Purger les timers
+    clearInterval(sessionTimer);
+    sessionTimer = null;
+    clearTimeout(ghostTimer);
+
+    // 4. Nettoyage UI
     currentSecret = "";
     document.getElementById('secret-input').value = "";
-
-    // 3. Réinitialiser la zone de message (canvas)
-    const canvas = document.getElementById('chat-canvas');
-    if (canvas) {
-        canvas.innerHTML = `
-    <div id="typing-indicator" class="text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2">
-      Contact est en train d'écrire...
-    </div>
-    <div class="flex justify-center">
-      <span class="text-xs font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-4 py-2 rounded-full conn-badge">
-        Tunnel Sécurisé Etabli
-      </span>
-    </div>
-    <div class="flex flex-col items-start max-w-[82%] space-y-1">
-      <div class="bubble-recv px-5 py-3">
-        <p class="text-sm font-bold leading-relaxed">Bonjour ! Vous êtes connecté(e) en toute sécurité.</p>
-      </div>
-      <span class="text-[10px] text-gray-300 font-bold ml-1">Maintenant</span>
-    </div>
-        `;
-    }
-
-    // Restaurer le badge P2P d'origine
-    const badge = document.querySelector('.conn-badge');
-    if (badge) {
-        badge.innerHTML = "Tunnel Sécurisé Etabli";
-        badge.classList.remove('bg-green-100', 'text-green-600');
-    }
-
-    // Remettre le bouton
-    const btn = document.getElementById('btn-establish');
-    if (btn) {
-        btn.innerHTML = `<span id="btn-text">Etablir le Tunnel Sécurisé</span>`;
-        btn.disabled = false;
-        if (window.applyLanguage) window.applyLanguage();
-    }
-
-    // 4. Transitions UI
+    document.getElementById('group-name-input').value = "";
+    document.getElementById('expiry-timer').classList.add('hidden');
+    
+    // Switch Screen
     document.getElementById('chat-screen').classList.remove('visible');
     document.getElementById('setup-screen').style.display = 'flex';
+
+    const btn = document.getElementById('btn-establish');
+    if (btn) {
+        btn.innerHTML = `<span>Etablir le Tunnel Sécurisé</span>`;
+        if (window.applyLanguage) window.applyLanguage();
+        btn.disabled = false;
+    }
+
+    // 5. Vider le canvas
+    const canvas = document.getElementById('chat-canvas');
+    if (canvas) canvas.innerHTML = ''; 
 }
 
 function updateP2PStatus(status) {
@@ -581,7 +592,52 @@ function showTypingIndicator(name) {
     }, 2000);
 }
 
-// --- 8. V3 EXCLUSIVES: PANIC, GHOST, HOLD ---
+// --- 8. V3 EXCLUSIVES: PANIC, GHOST, HOLD, GROUP SYNC ---
+
+async function handleHandshake(encryptedContent) {
+    const raw = await cryptoEngine.decrypt(encryptedContent);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    
+    // Sync Group Name
+    if (data.groupName) {
+        currentGroupName = data.groupName;
+        document.getElementById('active-group-name').textContent = currentGroupName;
+    }
+    
+    // Sync TTL/Expiry
+    if (data.ttl > 0 && !sessionTimer) {
+        currentTTL = data.ttl;
+        expiryDate = data.expiry;
+        startSessionTimer();
+    }
+}
+
+function startSessionTimer() {
+    const display = document.getElementById('expiry-timer');
+    display.classList.remove('hidden');
+    
+    sessionTimer = setInterval(() => {
+        const remaining = Math.floor((expiryDate - Date.now()) / 1000);
+        if (remaining <= 0) {
+            clearInterval(sessionTimer);
+            alert("⏰ Le temps est écoulé. Session expirée.");
+            leaveSecureTunnel();
+            return;
+        }
+        
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        display.textContent = `Exp: ${m}:${s.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+function toggleAdvanced() {
+    const panel = document.getElementById('advanced-config');
+    const chevron = document.getElementById('adv-chevron');
+    panel.classList.toggle('hidden');
+    chevron.classList.toggle('rotate-90');
+}
 
 function handlePanicClick() {
     panicClicks++;
