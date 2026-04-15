@@ -51,7 +51,7 @@ def handle_disconnect():
     if request.sid in active_users:
         room = active_users[request.sid]['room']
         del active_users[request.sid]
-        print(f"❌ [Déconnexion] Client {request.sid} a quitté le salon {room}.")
+        print(f" [Déconnexion] Client {request.sid} a quitté le salon {room}.")
         # Notifier tout le monde du nouveau compte
         if room:
             update_room_count(room)
@@ -84,7 +84,7 @@ def handle_join(data):
     join_room(room_id)
     active_users[request.sid]['room'] = room_id
     
-    print(f"🔒 [Canal Établi] Client {request.sid} rejoint: {room_id} ({members+1} membres)")
+    print(f" [Canal Établi] Client {request.sid} rejoint: {room_id} ({members+1} membres)")
     
     # Mise à jour du compteur pour tout le monde
     update_room_count(room_id)
@@ -124,7 +124,7 @@ def handle_webrtc_signal(data):
     if room_id:
         # On renvoie le signal à tout le monde dans le salon (sauf l'expéditeur)
         emit('webrtc_signal', data, room=room_id, include_self=False)
-        print(f"📡 [Signaling] Relai de signal WebRTC dans le salon {room_id}")
+        print(f" [Signaling] Relai de signal WebRTC dans le salon {room_id}")
 
 if __name__ == '__main__':
     # Mode silencieux, sans logs superflus
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     log.setLevel(logging.ERROR)
     
     print("="*60)
-    print("🛡️ URYA BLIND RELAY SERVER - ACTIF")
+    print(" URYA BLIND RELAY SERVER - ACTIF")
     print("Zero-Knowledge Routing Engine")
     print("="*60)
     

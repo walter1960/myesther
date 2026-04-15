@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>MyEsther 💬</title>
+<title>MyEsther </title>
 <meta name="description" content="MyEsther - Chat Sécurisé Zéro-Connaissance"/>
 <link rel="manifest" href="manifest.json"/>
 <meta name="theme-color" content="#7c3aed"/>
@@ -367,12 +367,12 @@
     <div class="text-center space-y-3">
       <p class="text-xs font-black text-gray-400 uppercase tracking-widest">Personnaliser la couleur</p>
       <div class="flex justify-center gap-3" id="color-picker">
-        <div class="color-dot active" style="background:#7c3aed" onclick="setTheme('#7c3aed','#a855f7','#f5f3ff')" title="💜 Violet"></div>
-        <div class="color-dot" style="background:#ec4899" onclick="setTheme('#ec4899','#f472b6','#fce7f3')" title="🩷 Rose"></div>
-        <div class="color-dot" style="background:#0ea5e9" onclick="setTheme('#0ea5e9','#38bdf8','#eff6ff')" title="🩵 Bleu"></div>
-        <div class="color-dot" style="background:#10b981" onclick="setTheme('#10b981','#34d399','#ecfdf5')" title="💚 Vert"></div>
-        <div class="color-dot" style="background:#f59e0b" onclick="setTheme('#f59e0b','#fbbf24','#fffbeb')" title="🌟 Or"></div>
-        <div class="color-dot" style="background:#ff6b6b" onclick="setTheme('#ff6b6b','#ff8e8e','#fff0f0')" title="🧡 Corail"></div>
+        <div class="color-dot active" style="background:#7c3aed" onclick="setTheme('#7c3aed','#a855f7','#f5f3ff')" title=" Violet"></div>
+        <div class="color-dot" style="background:#ec4899" onclick="setTheme('#ec4899','#f472b6','#fce7f3')" title=" Rose"></div>
+        <div class="color-dot" style="background:#0ea5e9" onclick="setTheme('#0ea5e9','#38bdf8','#eff6ff')" title=" Bleu"></div>
+        <div class="color-dot" style="background:#10b981" onclick="setTheme('#10b981','#34d399','#ecfdf5')" title=" Vert"></div>
+        <div class="color-dot" style="background:#f59e0b" onclick="setTheme('#f59e0b','#fbbf24','#fffbeb')" title=" Or"></div>
+        <div class="color-dot" style="background:#ff6b6b" onclick="setTheme('#ff6b6b','#ff8e8e','#fff0f0')" title=" Corail"></div>
       </div>
     </div>
 
@@ -635,7 +635,7 @@
           if (permission === "granted") {
             notifsEnabled = true;
             updateNotifUI();
-            new Notification("MyEsther", { body: "Notifications activées ! 🔒" });
+            new Notification("MyEsther", { body: "Notifications activées ! " });
           }
         });
       } else {
@@ -677,7 +677,7 @@
     window.pushNotification = function(text) {
       if (notifsEnabled && document.visibilityState !== 'visible') {
         new Notification("MyEsther", {
-          body: "Nouveau message sécurisé reçu 🔒",
+          body: "Nouveau message sécurisé reçu ",
           icon: "/manifest.json" // Utilise l'icône de l'app si possible
         });
       }

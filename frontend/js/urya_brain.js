@@ -30,7 +30,7 @@ class URYACrypto {
             false,
             ['encrypt', 'decrypt']
         );
-        console.log("✅ [CRYPTO] Clé AES-256 dérivée avec succès.");
+        console.log(" [CRYPTO] Clé AES-256 dérivée avec succès.");
     }
 
     // Hashage du secret pour ID de base de données (Zero-Knowledge)
@@ -73,7 +73,7 @@ class URYACrypto {
 
             return new TextDecoder().decode(decryptedBuffer);
         } catch (e) {
-            console.error("❌ Échec du déchiffrement. Clé incorrecte ?");
+            console.error(" Échec du déchiffrement. Clé incorrecte ?");
             return null;
         }
     }
@@ -117,7 +117,7 @@ class URYAPeer {
     setupDataChannel(channel) {
         this.dataChannel = channel;
         channel.onopen = () => {
-            console.log("🚀 [WebRTC] Canal P2P Ouvert !");
+            console.log(" [WebRTC] Canal P2P Ouvert !");
             this.onStatus("p2p-ready");
         };
         channel.onmessage = (event) => {
@@ -267,13 +267,13 @@ async function establishSecureTunnel() {
         currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
         
         if (!currentSecret || currentSecret.length < 4) {
-            alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
+            alert(" Sécurité : Veuillez entrer un secret plus long.");
             resetBtn();
             return;
         }
 
         // A. Dérivation de clé Haute Sécurité
-        console.log("🛠️ [CRYPTO] Dérivation en cours...");
+        console.log(" [CRYPTO] Dérivation en cours...");
         await cryptoEngine.deriveKey(currentSecret);
         
         // B. Initialisation du stockage isolé
@@ -282,14 +282,14 @@ async function establishSecureTunnel() {
         await storageEngine.init();
 
         // C. Connexion Socket IO
-        console.log("🌐 [NET] Connexion au serveur...");
+        console.log(" [NET] Connexion au serveur...");
         // On permet polling si websocket échoue (plus robuste)
         socket = io({ transports: ['websocket', 'polling'], reconnectionAttempts: 3 });
 
         // Timeout de sécurité (si pas de connect en 10s)
         const connTimeout = setTimeout(() => {
             if (!socket.connected) {
-                alert("⌛ Délai de connexion dépassé. Vérifiez votre réseau.");
+                alert(" Délai de connexion dépassé. Vérifiez votre réseau.");
                 resetBtn();
                 socket.disconnect();
             }
@@ -297,7 +297,7 @@ async function establishSecureTunnel() {
 
         socket.on('connect', async () => {
             clearTimeout(connTimeout);
-            console.log("✅ [NET] Connecté !");
+            console.log(" [NET] Connecté !");
             
             // Calcul de l'expiration locale si TTL > 0
             if (currentTTL > 0) {
@@ -323,7 +323,7 @@ async function establishSecureTunnel() {
                 // Welcome badge
                 const badgeContainer = document.createElement('div');
                 badgeContainer.className = 'flex justify-center mb-4 mt-2';
-                badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge">✅ Tunnel Sécurisé Etabli</span>`;
+                badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge"> Tunnel Sécurisé Etabli</span>`;
                 canvas.appendChild(badgeContainer);
 
                 // Typing indicator
@@ -363,10 +363,12 @@ async function establishSecureTunnel() {
             setup.style.pointerEvents = 'none';
             
             setTimeout(() => {
+                setup.classList.add('screen-hidden');
                 setup.style.display = 'none';
                 chat.style.display = 'flex';
                 // Force reflow pour déclencher l'animation
                 chat.getBoundingClientRect();
+                chat.classList.remove('screen-hidden');
                 chat.style.opacity = '1';
                 chat.style.pointerEvents = 'auto';
                 document.dispatchEvent(new Event('myesther:connected'));
@@ -376,7 +378,7 @@ async function establishSecureTunnel() {
         });
 
         socket.on('connect_error', (err) => {
-            console.error("❌ Erreur Socket:", err);
+            console.error(" Erreur Socket:", err);
             alert("Erreur de connexion au serveur.");
             resetBtn();
         });
@@ -392,7 +394,7 @@ async function establishSecureTunnel() {
         });
 
     } catch (error) {
-        console.error("💥 CRASH au démarrage:", error);
+        console.error(" CRASH au démarrage:", error);
         alert("Une erreur critique est survenue. Veuillez rafraîchir.");
         resetBtn();
     }
@@ -403,11 +405,13 @@ function leaveSecureTunnel() {
     const chat = document.getElementById('chat-screen');
     const setup = document.getElementById('setup-screen');
     
+    chat.classList.add('screen-hidden');
     chat.style.opacity = '0';
     chat.style.pointerEvents = 'none';
     
     setTimeout(() => {
         chat.style.display = 'none';
+        setup.classList.remove('screen-hidden');
         setup.style.display = 'flex';
         setup.getBoundingClientRect();
         setup.style.opacity = '1';
@@ -423,7 +427,7 @@ function leaveSecureTunnel() {
 function updateP2PStatus(status) {
     const badge = document.querySelector('.conn-badge');
     if(status === 'p2p-ready') {
-        badge.innerHTML = "⚡ Connexion P2P Directe Établie";
+        badge.innerHTML = " Connexion P2P Directe Établie";
         badge.classList.add('bg-green-100', 'text-green-600');
     }
 }
@@ -688,7 +692,7 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
             <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${window.currentPrimary},${window.currentLight})">
                ${body}
             </div>
-            <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '🔥' : ''}</span>`;
+            <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '' : ''}</span>`;
     } else {
         node.className = 'animate-popIn flex flex-col items-start max-w-[82%] space-y-1 mb-4';
         const senderLabel = senderName && senderName !== 'them' ? `<span class="text-[9px] font-black text-brand uppercase ml-2 mb-0.5 block">${senderName}</span>` : '';
@@ -794,7 +798,7 @@ function startSessionTimer() {
         const remaining = Math.floor((expiryDate - Date.now()) / 1000);
         if (remaining <= 0) {
             clearInterval(sessionTimer);
-            alert("⏰ Le temps est écoulé. Session expirée.");
+            alert(" Le temps est écoulé. Session expirée.");
             leaveSecureTunnel();
             return;
         }
