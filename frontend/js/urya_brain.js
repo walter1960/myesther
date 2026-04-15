@@ -241,6 +241,8 @@ window.currentLight = "#a78bfa";
 let sessionTimer = null;
 
 async function establishSecureTunnel() {
+    hapticFeedback('medium');
+    requestNotificationPermission();
     const btn = document.getElementById('btn-establish');
     const originalHTML = btn ? btn.innerHTML : '';
     const resetBtn = () => {
@@ -460,6 +462,7 @@ async function sendSecureMessage() {
     }
 
     appendMessage(text, 'sent', false, Date.now(), currentSendMode === 'burn', 'me');
+    playProfessionalSound('send');
     input.value = '';
     
     // Reset mode après envoi burn
@@ -476,6 +479,16 @@ async function receivePayload(payload) {
             }
 
             appendMessage(decryptedContent, 'received', payload.type === 'img', Date.now(), payload.burn, payload.sender || 'them');
+            playProfessionalSound('receive');
+            
+            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification('MyEsther', {
+                        body: 'Un message sécurisé est arrivé.',
+                        icon: '/img/icon-192.png'
+                    });
+                } catch(e) {}
+            }
             if (window.pushNotification) window.pushNotification();
         }
     } else if (payload.type === 'typing') {
@@ -889,5 +902,56 @@ function hapticFeedback(style) {
     else if (style === 'medium') navigator.vibrate([15, 40, 15]); // Double tap subtil (réception)
     else if (style === 'heavy') navigator.vibrate([20, 30, 20, 30, 30]); // Action forte (quitter/erreur)
     else if (style === 'success') navigator.vibrate([10, 30, 20]); // Réponse douce
+}
+
+// --- OPTION 1 & 2 : Notifications Audiovisuelles (Local/Offline) ---
+let audioCtx = null;
+function unlockAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
+
+function playProfessionalSound(type = 'receive') {
+    if (!audioCtx) return;
+    try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        if (type === 'receive') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+            oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.08);
+            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime); 
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        } else if (type === 'send') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+        }
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {}
+}
+
+async function requestNotificationPermission() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") return;
+    if (Notification.permission !== "denied") {
+        try {
+            await Notification.requestPermission();
+        } catch(e) {}
+    }
 }
 
