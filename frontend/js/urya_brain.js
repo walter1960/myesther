@@ -348,13 +348,19 @@ async function establishSecureTunnel() {
             // Transition visuelle fluide
             const setup = document.getElementById('setup-screen');
             const chat = document.getElementById('chat-screen');
-            setup.classList.add('screen-hidden');
+            
+            setup.style.opacity = '0';
+            setup.style.pointerEvents = 'none';
+            
             setTimeout(() => {
-                setup.classList.add('hidden');
-                chat.classList.remove('hidden');
-                setTimeout(() => chat.classList.remove('screen-hidden'), 50);
+                setup.style.display = 'none';
+                chat.style.display = 'flex';
+                // Force reflow pour déclencher l'animation
+                chat.getBoundingClientRect();
+                chat.style.opacity = '1';
                 document.dispatchEvent(new Event('myesther:connected'));
-            }, 400);
+            }, 350);
+            
             saveToHistory(currentSecret);
         });
 
@@ -676,7 +682,7 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
 
     if (burnOnRead && type === 'received') {
         body = `
-            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all font-nunito" onclick="revealBurnMessage('${msgId}')">
+            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all" onclick="revealBurnMessage('${msgId}')">
                 <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-gray-400 mb-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>
                 <span class="text-[10px] font-black uppercase text-gray-500">SECRET - RÉVÉLER</span>
             </div>
