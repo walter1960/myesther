@@ -893,7 +893,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('mousemove', resetGhostTimer);
     document.addEventListener('touchstart', resetGhostTimer);
     resetGhostTimer();
+    initEmojiPanel();
 });
+
+// --- EMOJI PICKER ---
+const EMOJI_LIST = [
+    '😀','😂','😍','😘','😊','😎','🤩','😭','😢','😡',
+    '🥰','😇','🤔','😴','🥳','😅','🤣','😱','🙄','😏',
+    '👍','👎','👏','🙏','🤝','💪','✌️','🤞','👋','🫂',
+    '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
+    '🔥','⚡','✨','🌟','💫','🎉','🎊','🎁','🏆','🥇',
+    '😋','🤤','😝','😜','🤪','😈','👿','💀','🤖','👻',
+    '🐶','🐱','🐭','🐸','🦁','🐼','🦊','🐺','🦄','🐲',
+    '🍕','🍔','🍟','🌮','🍣','🍜','🍩','🍪','🎂','🍫',
+    '⚽','🏀','🎮','🎸','🎵','🎶','📱','💻','📷','🎬',
+    '🌈','☀️','🌙','⭐','🌊','🌺','🌸','🍀','🌴','🏖️'
+];
+
+function initEmojiPanel() {
+    const panel = document.getElementById('emoji-panel');
+    if (!panel) return;
+    panel.innerHTML = '';
+    EMOJI_LIST.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.textContent = emoji;
+        btn.setAttribute('type', 'button');
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const input = document.getElementById('chat-input');
+            if (input) {
+                const pos = input.selectionStart;
+                const val = input.value;
+                input.value = val.slice(0, pos) + emoji + val.slice(pos);
+                input.selectionStart = input.selectionEnd = pos + emoji.length;
+                input.focus();
+            }
+        };
+        panel.appendChild(btn);
+    });
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#emoji-panel') && e.target.id !== 'emoji-btn') {
+            panel.classList.remove('open');
+        }
+    });
+}
+
+function toggleEmojiPanel() {
+    const panel = document.getElementById('emoji-panel');
+    if (panel) panel.classList.toggle('open');
+}
 
 function hapticFeedback(style) {
     if (!navigator.vibrate) return;
