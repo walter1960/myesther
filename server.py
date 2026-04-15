@@ -10,7 +10,10 @@ import time
 # Dossier frontend (compatible local et cloud)
 # Render exécute depuis la racine du repo
 base_dir = os.path.dirname(os.path.abspath(__file__))
-frontend_dir = os.path.join(base_dir, 'frontend')
+# Pour le local, on regarde un niveau au-dessus si backend/frontend n'existe pas
+frontend_dir = os.path.join(os.path.dirname(base_dir), 'frontend')
+if not os.path.exists(frontend_dir):
+    frontend_dir = os.path.join(base_dir, 'frontend')
 
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')

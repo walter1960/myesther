@@ -242,12 +242,18 @@ let sessionTimer = null;
 
 async function establishSecureTunnel() {
     const btn = document.getElementById('btn-establish');
+    const originalHTML = btn ? btn.innerHTML : '';
     const resetBtn = () => {
         if (btn) {
-            btn.innerHTML = window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé";
+            btn.innerHTML = originalHTML || (window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé");
             btn.disabled = false;
         }
     };
+
+    if (btn) {
+        btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+        btn.disabled = true;
+    }
 
     try {
         const secretEl = document.getElementById('secret-input');

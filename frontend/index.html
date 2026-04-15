@@ -179,9 +179,7 @@
   }
   @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-  /* Screen de chat */
-  #chat-screen { display: none; height: 100vh; flex-direction: column; background: #fafafa; }
-  #chat-screen.visible { display: flex; }
+  /* Style du container principal défini par Tailwind */
 
   /* Indicateur "en train de charger" */
   .loading-dots span {
@@ -590,68 +588,6 @@
     if (document.getElementById('lang-display')) document.getElementById('lang-display').textContent = l.lang;
     if (document.getElementById('lang-ind')) document.getElementById('lang-ind').textContent = l.langInd;
   }
-
-  // === AFFICHAGE DES MESSAGES ===
-  function appendMessage(text, type) {
-    const canvas = document.getElementById('chat-canvas');
-    const time = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
-    const node = document.createElement('div');
-
-    if (type === 'sent') {
-      node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1';
-      node.innerHTML = `
-        <div class="bubble-sent px-5 py-3" style="background:linear-gradient(135deg,${currentPrimary},${currentLight})">
-          <p class="text-sm font-bold leading-relaxed text-white">${text}</p>
-        </div>
-        <span class="text-[10px] text-gray-300 font-bold mr-1">${time}</span>`;
-    } else {
-      node.className = 'flex flex-col items-start max-w-[82%] space-y-1';
-      node.innerHTML = `
-        <div class="bubble-recv px-5 py-3">
-          <p class="text-sm font-bold leading-relaxed text-gray-800">${text}</p>
-        </div>
-        <span class="text-[10px] text-gray-300 font-bold ml-1">${time}</span>`;
-    }
-
-    canvas.appendChild(node);
-    canvas.scrollTop = canvas.scrollHeight;
-  }
-
-  // === PASSAGE AU CHAT ===
-  // On écrase la fonction appendMessage et la transition dans urya_brain.js
-  window.appendMessage = appendMessage;
-
-  // Patch de la transition setup -> chat pour notre nouvelle UI
-  const _original = window.establishSecureTunnel;
-  window.establishSecureTunnel = async function() {
-    const btn = document.getElementById('btn-establish');
-    if (!btn) return;
-    
-    // Sauvegarder l'état original au cas où
-    const originalHTML = btn.innerHTML;
-    
-    btn.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
-    btn.disabled = true;
-
-    try {
-      if (typeof _original !== 'function') {
-        throw new Error("Moteur de sécurité non chargé. Rafraîchissez la page.");
-      }
-      await _original();
-    } catch (e) {
-      console.error("Patch Error:", e);
-      alert(e.message || "Erreur lors de l'établissement du tunnel.");
-      btn.innerHTML = originalHTML;
-      btn.disabled = false;
-    }
-  };
-
-  // Redéfinir la transition après connexion socket
-  document.addEventListener('myesther:connected', () => {
-    document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('chat-screen').classList.add('visible');
-    setTimeout(() => document.getElementById('chat-input')?.focus(), 300);
-  });
 
   // === ENTER TO SEND ===
   document.addEventListener('DOMContentLoaded', () => {
