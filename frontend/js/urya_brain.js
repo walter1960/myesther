@@ -231,13 +231,23 @@ let holdTimer = null;
 let sessionTimer = null;
 
 async function establishSecureTunnel() {
-    currentSecret = document.getElementById('secret-input').value;
-    currentAlias = document.getElementById('alias-input').value.trim() || "Anonyme";
-    currentGroupName = document.getElementById('group-name-input').value.trim() || "MyEsther Group";
-    currentTTL = parseInt(document.getElementById('group-ttl-input').value);
+    const secretEl = document.getElementById('secret-input');
+    const aliasEl = document.getElementById('alias-input');
+    const groupNameEl = document.getElementById('group-name-input');
+    const groupTtlEl = document.getElementById('group-ttl-input');
+
+    currentSecret = secretEl ? secretEl.value : "";
+    currentAlias = (aliasEl ? aliasEl.value.trim() : "") || "Anonyme";
+    currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "MyEsther Group";
+    currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
     
     if (!currentSecret || currentSecret.length < 4) {
         alert("🔒 Sécurité : Veuillez entrer un secret plus long.");
+        const btn = document.getElementById('btn-establish');
+        if (btn) {
+           btn.innerHTML = window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé";
+           btn.disabled = false;
+        }
         return;
     }
 
@@ -248,7 +258,8 @@ async function establishSecureTunnel() {
     }
 
     // Mise à jour header immédiate
-    document.getElementById('active-group-name').textContent = currentGroupName;
+    const headerName = document.getElementById('active-group-name');
+    if (headerName) headerName.textContent = currentGroupName;
 
     // A. Dérivation de clé Haute Sécurité
     await cryptoEngine.deriveKey(currentSecret);
