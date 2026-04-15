@@ -35,7 +35,7 @@
   /* RESET : Force le fond blanc, texte sombre, police joyeuse */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    height: 100%;
+    height: 100dvh;
     font-family: 'Nunito', sans-serif;
     background: #ffffff !important;
     color: #1a1a2e;
@@ -48,7 +48,7 @@
   /* Fond joyeux : dégradé subtil en haut de page */
   .joy-bg {
     background: linear-gradient(160deg, #f5f3ff 0%, #fce7f3 40%, #eff6ff 100%);
-    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Bouton send */
@@ -394,7 +394,7 @@
 <!-- ============================================================ -->
 <!-- CHAT SCREEN                                                   -->
 <!-- ============================================================ -->
-<main id="chat-screen" class="hidden fixed inset-0 flex flex-col joy-bg screen-fade screen-hidden">
+<main id="chat-screen" class="hidden absolute inset-0 w-full min-h-[100dvh] flex flex-col joy-bg screen-fade screen-hidden">
   
   <!-- TopBar -->
   <header class="glass-header flex items-center justify-between px-5 py-4 flex-shrink-0 z-10">
@@ -472,7 +472,7 @@
   </section>
 
   <!-- Zone de saisie -->
-  <footer class="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-100 relative">
+  <footer class="flex-shrink-0 px-4 pt-3 bg-white border-t border-gray-100 relative" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
     <div class="flex items-center gap-3">
       
       <!-- Bouton image -->

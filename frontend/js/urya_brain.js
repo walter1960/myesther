@@ -500,8 +500,12 @@ async function cleanExpiredSalons() {
     let hasChanges = false;
 
     for (const salon of history) {
-        if (salon.ttl > 0 && (now - salon.creationDate) >= salon.ttl * 1000) {
-            console.log(`[PURGE] Le salon ${salon.groupName} a expiré.`);
+        const hardLimit = 86400 * 1000; // 24H max
+        const isExpiredByTTL = salon.ttl > 0 && (now - salon.creationDate) >= salon.ttl * 1000;
+        const isExpiredByHardLimit = (now - salon.creationDate) >= hardLimit;
+        
+        if (isExpiredByTTL || isExpiredByHardLimit) {
+            console.log(`[PURGE] Le salon ${salon.groupName} a expiré ou dépassé 24h.`);
             try {
                 const dbId = await cryptoEngine.hashSecret(salon.secret);
                 window.indexedDB.deleteDatabase(`myesther_db_${dbId}`);
