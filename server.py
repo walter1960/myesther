@@ -1,5 +1,5 @@
-from gevent import monkey
-monkey.patch_all()
+import eventlet
+eventlet.monkey_patch()
 import os
 import hashlib
 from flask import Flask, request, send_from_directory
@@ -16,7 +16,7 @@ if not os.path.exists(frontend_dir):
     frontend_dir = os.path.join(base_dir, 'frontend')
 
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Mémoire amnésique du serveur
 active_users = {}
