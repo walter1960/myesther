@@ -96,36 +96,41 @@
   /* Badge de connexion */
   .conn-badge { animation: fadeInDown 0.5s ease; }
 
-  /* Emoji Picker */
+  /* Emoji Picker - flottant au dessus du footer */
   .emoji-panel {
-    position: absolute;
-    bottom: 100%;
+    position: fixed;
+    bottom: -280px;
     left: 0;
     right: 0;
     background: #fff;
     border-top: 2px solid #ede9fe;
     border-radius: 20px 20px 0 0;
-    padding: 12px;
-    display: none;
+    padding: 12px 12px 20px 12px;
+    display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    max-height: 200px;
+    gap: 4px;
+    height: 220px;
     overflow-y: auto;
-    z-index: 50;
-    box-shadow: 0 -4px 20px rgba(124,58,237,0.08);
+    z-index: 999;
+    box-shadow: 0 -8px 30px rgba(124,58,237,0.15);
+    transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
-  .emoji-panel.open { display: flex; }
+  .emoji-panel.open { bottom: 0; }
   .emoji-panel button {
-    font-size: 22px;
+    font-size: 24px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 4px 6px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     transition: background 0.15s;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
   }
-  .emoji-panel button:hover { background: #f5f3ff; }
+  .emoji-panel button:active { background: #f5f3ff; transform: scale(1.2); }
   /* Message pop-in animation */
   .msg-pop { animation: msgPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
   @keyframes msgPop {
@@ -502,8 +507,6 @@
     </div>
   </section>
 
-  <!-- Emoji Picker Panel -->
-  <div id="emoji-panel" class="emoji-panel"></div>
 
   <!-- Zone de saisie -->
   <footer class="flex-shrink-0 px-4 pt-3 bg-white border-t border-gray-100 relative" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);">
@@ -749,5 +752,7 @@
 </script>
 <!-- Cerveau de MyEsther : chargé après le DOM pour disponibilité immédiate -->
 <script src="js/urya_brain.js"></script>
+<!-- Emoji Picker - overlay fixe, ne touche pas au layout -->
+<div id="emoji-panel" class="emoji-panel"></div>
 </body>
 </html>
