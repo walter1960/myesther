@@ -13,13 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 
-<!-- Scripts chargés prioritairement -->
-<script src="https://cdn.tailwindcss.com?plugins=forms" defer></script>
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-<script src="js/urya_brain.js"></script>
-
+<!-- Configuration Tailwind AVANT le CDN -->
 <script>
-  // Tailwind config AVANT le rendu
   window.tailwindConfig = {
     theme: {
       extend: {
@@ -31,6 +26,10 @@
     }
   };
 </script>
+
+<!-- Scripts -->
+<script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
 <style>
   /* RESET : Force le fond blanc, texte sombre, police joyeuse */
@@ -344,17 +343,16 @@
                 </select>
               </div>
             </div>
-          </div>
         </div>
 
         <div class="flex flex-col gap-1 mt-4" id="history-tags">
           <!-- Injecté par JS : Cartes des salons récents -->
         </div>
-      </div>
 
-      <button id="btn-establish" class="btn-tunnel" onclick="establishSecureTunnel()">
-        <span id="btn-text">Etablir le Tunnel Sécurisé</span>
-      </button>
+        <button id="btn-establish" class="btn-tunnel mt-4" onclick="establishSecureTunnel()">
+          <span id="btn-text">Établir le Tunnel Sécurisé</span>
+        </button>
+      </div>
     </div>
 
     <!-- Badges sécurité -->
@@ -709,5 +707,7 @@
     applyLanguage();
   });
 </script>
+<!-- Cerveau de MyEsther : chargé après le DOM pour disponibilité immédiate -->
+<script src="js/urya_brain.js"></script>
 </body>
 </html>
