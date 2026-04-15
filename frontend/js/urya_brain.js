@@ -283,8 +283,14 @@ async function establishSecureTunnel() {
         const history = await storageEngine.loadMessages();
         const canvas = document.getElementById('chat-canvas');
         // Nettoyer le canvas avant de charger (sauf indicateur de frappe)
-        const typing = document.getElementById('typing-indicator');
+        let typing = document.getElementById('typing-indicator');
         canvas.innerHTML = '';
+        if (!typing) {
+            typing = document.createElement('div');
+            typing.id = 'typing-indicator';
+            typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
+            typing.textContent = "Contact est en train d'écrire...";
+        }
         canvas.appendChild(typing);
 
         for (const m of history) {
