@@ -22,7 +22,7 @@ class URYACrypto {
             {
                 name: 'PBKDF2',
                 salt: this.salt,
-                iterations: 100000,
+                iterations: 60000,
                 hash: 'SHA-256'
             },
             importedKey,
