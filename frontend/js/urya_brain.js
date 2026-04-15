@@ -392,43 +392,21 @@ function leaveSecureTunnel() {
     const chat = document.getElementById('chat-screen');
     const setup = document.getElementById('setup-screen');
     
-    chat.classList.add('screen-hidden');
+    chat.style.opacity = '0';
+    chat.style.pointerEvents = 'none';
+    
     setTimeout(() => {
-        chat.classList.add('hidden');
-        setup.classList.remove('hidden');
-        setTimeout(() => setup.classList.remove('screen-hidden'), 50);
+        chat.style.display = 'none';
+        setup.style.display = 'flex';
+        setup.getBoundingClientRect();
+        setup.style.opacity = '1';
+        setup.style.pointerEvents = 'auto';
         
         if (socket) socket.disconnect();
-        localStorage.clear();
+        
+        // Rafraîchir l'application pour garantir le Zero-Trace mémoire (sauf pour l'historique de salons)
         location.reload(); 
     }, 400);
-}
-
-    // 3. Purger les timers
-    clearInterval(sessionTimer);
-    sessionTimer = null;
-    clearTimeout(ghostTimer);
-
-    // 4. Nettoyage UI
-    currentSecret = "";
-    document.getElementById('secret-input').value = "";
-    document.getElementById('group-name-input').value = "";
-    document.getElementById('expiry-timer').classList.add('hidden');
-    
-    // Switch Screen
-    document.getElementById('chat-screen').classList.remove('visible');
-    document.getElementById('setup-screen').style.display = 'flex';
-
-    const btn = document.getElementById('btn-establish');
-    if (btn) {
-        btn.innerHTML = `<span>Etablir le Tunnel Sécurisé</span>`;
-        if (window.applyLanguage) window.applyLanguage();
-        btn.disabled = false;
-    }
-
-    // 5. Vider le canvas
-    const canvas = document.getElementById('chat-canvas');
-    if (canvas) canvas.innerHTML = ''; 
 }
 
 function updateP2PStatus(status) {
@@ -722,8 +700,7 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
            setTimeout(() => node.remove(), 400);
         }, 10000);
     }
-}
-
+    
     // Suppression Auto si mode éphémère général actif (et pas burn-on-read déjà)
     if (isAutoDestruct && !burnOnRead) {
         setTimeout(() => node.remove(), 10000);
