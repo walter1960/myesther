@@ -228,8 +228,8 @@ let ghostTimer = null;
 let panicClicks = 0;
 let panicTimer = null;
 let holdTimer = null;
-let currentPrimary = "#7c3aed";
-let currentLight = "#a78bfa";
+window.currentPrimary = "#7c3aed";
+window.currentLight = "#a78bfa";
 let sessionTimer = null;
 
 async function establishSecureTunnel() {
