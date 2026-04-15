@@ -672,14 +672,14 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
     }
 
     if (type === 'sent') {
-        node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
+        node.className = 'msg-pop flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
         node.innerHTML = `
             <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${window.currentPrimary},${window.currentLight})">
                ${body}
             </div>
             <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '🔥' : ''}</span>`;
     } else {
-        node.className = 'flex flex-col items-start max-w-[82%] space-y-1 mb-4';
+        node.className = 'msg-pop flex flex-col items-start max-w-[82%] space-y-1 mb-4';
         const senderLabel = senderName && senderName !== 'them' ? `<span class="text-[9px] font-black text-brand uppercase ml-2 mb-0.5 block">${senderName}</span>` : '';
         node.innerHTML = `
             ${senderLabel}
