@@ -3,7 +3,7 @@ services:
     name: myesther
     runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn -k eventlet -w 1 server:app"
+    startCommand: "gunicorn -k gevent -w 1 server:app"
     envVars:
       - key: PORT
         value: 5000
