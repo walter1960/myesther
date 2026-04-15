@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 import os
 import hashlib
 from flask import Flask, request, send_from_directory
