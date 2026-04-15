@@ -339,7 +339,16 @@ async function establishSecureTunnel() {
                 socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
             }, 1000);
 
-            document.dispatchEvent(new Event('myesther:connected'));
+            // Transition visuelle fluide
+            const setup = document.getElementById('setup-screen');
+            const chat = document.getElementById('chat-screen');
+            setup.classList.add('screen-hidden');
+            setTimeout(() => {
+                setup.classList.add('hidden');
+                chat.classList.remove('hidden');
+                setTimeout(() => chat.classList.remove('screen-hidden'), 50);
+                document.dispatchEvent(new Event('myesther:connected'));
+            }, 400);
             saveToHistory(currentSecret);
         });
 
@@ -367,17 +376,21 @@ async function establishSecureTunnel() {
 }
 
 function leaveSecureTunnel() {
-    // 1. Fermer WebRTC P2P
-    if (peerController && peerController.pc) {
-        peerController.pc.close();
-    }
-    peerController = null;
-
-    // 2. Déconnecter du Socket
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
+    hapticFeedback('medium');
+    const chat = document.getElementById('chat-screen');
+    const setup = document.getElementById('setup-screen');
+    
+    chat.classList.add('screen-hidden');
+    setTimeout(() => {
+        chat.classList.add('hidden');
+        setup.classList.remove('hidden');
+        setTimeout(() => setup.classList.remove('screen-hidden'), 50);
+        
+        if (socket) socket.disconnect();
+        localStorage.clear();
+        location.reload(); 
+    }, 400);
+}
 
     // 3. Purger les timers
     clearInterval(sessionTimer);
@@ -541,21 +554,26 @@ function toggleAutoDestruct() {
 
 function appendMessage(content, type, isImage = false, timestamp = Date.now(), burnOnRead = false, senderName = '') {
     const canvas = document.getElementById('chat-canvas');
+    if (!canvas) return;
+    
+    // Feedback tactile & visuel
+    hapticFeedback(type === 'sent' ? 'light' : 'medium');
+    
     const time = new Date(timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
     const node = document.createElement('div');
     const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
     node.id = msgId;
+    node.classList.add('msg-pop'); // Animation CSS
 
     let body = isImage 
         ? `<img src="${content}" class="max-w-full rounded-xl shadow-sm cursor-zoom-in" onclick="window.open(this.src)"/>`
         : `<p class="text-sm font-bold leading-relaxed ${type==='sent' ? 'text-white' : 'text-gray-800'}">${content}</p>`;
 
     if (burnOnRead && type === 'received') {
-        // Mode Burn-on-Read UI
         body = `
-            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all" onclick="revealBurnMessage('${msgId}')">
+            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all font-nunito" onclick="revealBurnMessage('${msgId}')">
                 <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-gray-400 mb-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>
-                <span class="text-[10px] font-black uppercase text-gray-500">Contenu Sensible - Révéler</span>
+                <span class="text-[10px] font-black uppercase text-gray-500">SECRET - RÉVÉLER</span>
             </div>
             <div id="content-${msgId}" class="hidden relative">
                 ${body}
@@ -567,7 +585,7 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
     if (type === 'sent') {
         node.className = 'flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
         node.innerHTML = `
-            <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${currentPrimary},${currentLight})">
+            <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${window.currentPrimary},${window.currentLight})">
                ${body}
             </div>
             <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '🔥' : ''}</span>`;
@@ -579,11 +597,21 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
             <div class="bubble-recv px-4 py-3">
                ${body}
             </div>
-            <span class="text-[10px] text-gray-300 font-bold ml-1">${time}</span>`;
+            <span class="text-[10px] text-gray-400 font-bold ml-1 text-nunito tracking-tight">${time}</span>`;
     }
 
     canvas.appendChild(node);
-    canvas.scrollTop = canvas.scrollHeight;
+    canvas.scrollTo({ top: canvas.scrollHeight, behavior: 'smooth' });
+
+    if (burnOnRead && type === 'sent') {
+        setTimeout(() => {
+           node.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+           node.style.opacity = '0';
+           node.style.transform = 'scale(0.9) translateY(-10px)';
+           setTimeout(() => node.remove(), 400);
+        }, 10000);
+    }
+}
 
     // Suppression Auto si mode éphémère général actif (et pas burn-on-read déjà)
     if (isAutoDestruct && !burnOnRead) {
@@ -737,4 +765,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', resetGhostTimer);
     resetGhostTimer();
 });
+
+function hapticFeedback(style) {
+    if (!navigator.vibrate) return;
+    if (style === 'light') navigator.vibrate(10);
+    else if (style === 'medium') navigator.vibrate([15, 30, 15]);
+    else if (style === 'heavy') navigator.vibrate([40, 60, 40]);
+}
 

@@ -95,6 +95,36 @@
 
   /* Badge de connexion */
   .conn-badge { animation: fadeInDown 0.5s ease; }
+  /* Message pop-in animation */
+  .msg-pop { animation: msgPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both; }
+  @keyframes msgPop {
+    from { opacity: 0; transform: scale(0.8) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Screen transitions */
+  .screen-fade { transition: opacity 0.4s ease, transform 0.4s ease; }
+  .screen-hidden { opacity: 0; transform: scale(0.98); pointer-events: none; }
+
+  /* Premium Blur Header */
+  .glass-header {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  }
+
+  /* Progress bar for Burn-on-Read */
+  .burn-progress {
+    height: 3px;
+    background: #ef4444;
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    border-radius: 99px;
+    transition: width 10s linear;
+  }
+
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -349,10 +379,10 @@
 <!-- ============================================================ -->
 <!-- CHAT SCREEN                                                   -->
 <!-- ============================================================ -->
-<main id="chat-screen">
+<main id="chat-screen" class="hidden fixed inset-0 flex flex-col joy-bg screen-fade screen-hidden">
   
   <!-- TopBar -->
-  <header class="flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm flex-shrink-0">
+  <header class="glass-header flex items-center justify-between px-5 py-4 flex-shrink-0 z-10">
     <div class="flex items-center gap-3">
       <!-- Bouton Retour -->
       <button onclick="leaveSecureTunnel()" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors mr-1" title="Quitter le Tunnel">
