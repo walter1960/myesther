@@ -358,6 +358,7 @@ async function establishSecureTunnel() {
                 // Force reflow pour déclencher l'animation
                 chat.getBoundingClientRect();
                 chat.style.opacity = '1';
+                chat.style.pointerEvents = 'auto';
                 document.dispatchEvent(new Event('myesther:connected'));
             }, 350);
             
