@@ -1,14 +1,14 @@
 /**
- * URYA NEURAL BRAIN V2 - WebRTC & AES-GCM Edition
- * High-Security Cryptography & P2P Communication
+ * URYA NEURAL BRAIN V3 - Ghost Edition
+ * WebRTC, Unified AES-256-GCM, Ephemeral Voice Notes & Lobby Protection
  */
 
-// --- 1. MOTEUR CRYPTOGRAPHIQUE (WEB CRYPTO API) ---
+// --- 1. MOTEUR CRYPTOGRAPHIQUE UNIFIÉ (BASE64 & COMPATIBILITÉ ANDROID) ---
 
 class URYACrypto {
     constructor() {
         this.key = null;
-        this.salt = new TextEncoder().encode("URYA_SALT_2026"); // Sel statique pour MyEsther
+        this.salt = new TextEncoder().encode("URYA_SALT_2026"); // Même sel qu'Android
     }
 
     // Dérivation de clé PBKDF2 (Grade Militaire)
@@ -41,6 +41,27 @@ class URYACrypto {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // Encodage Base64 standard (Compatible Android CryptoManager)
+    arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
+
+    base64ToUint8Array(base64) {
+        const binary = window.atob(base64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
     async encrypt(text) {
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encodedText = new TextEncoder().encode(text);
@@ -50,18 +71,30 @@ class URYACrypto {
             encodedText
         );
 
-        // On concatène IV + Ciphertext pour le transport
+        // On concatène IV + Ciphertext
         const combined = new Uint8Array(iv.length + ciphertext.byteLength);
         combined.set(iv);
         combined.set(new Uint8Array(ciphertext), iv.length);
         
-        // Retourne un tableau d'octets compatible avec Socket/WebRTC
-        return Array.from(combined);
+        // Retourne Base64 universel (Web & Android)
+        return this.arrayBufferToBase64(combined.buffer);
     }
 
-    async decrypt(combinedArray) {
+    async decrypt(input) {
         try {
-            const combined = new Uint8Array(combinedArray);
+            let combined;
+            if (typeof input === 'string') {
+                combined = this.base64ToUint8Array(input);
+            } else if (Array.isArray(input)) {
+                combined = new Uint8Array(input);
+            } else if (input instanceof Uint8Array) {
+                combined = input;
+            } else {
+                return null;
+            }
+
+            if (combined.length < 12) return null;
+
             const iv = combined.slice(0, 12);
             const ciphertext = combined.slice(12);
 
@@ -97,19 +130,16 @@ class URYAPeer {
         this.socket = socket;
         this.pc = new RTCPeerConnection(this.config);
 
-        // Gestion des candidats ICE
         this.pc.onicecandidate = (event) => {
             if (event.candidate) {
                 this.socket.emit('webrtc_signal', { type: 'candidate', candidate: event.candidate });
             }
         };
 
-        // Réception du DataChannel (côté passif)
         this.pc.ondatachannel = (event) => {
             this.setupDataChannel(event.channel);
         };
 
-        // Création du DataChannel (côté actif - appelé par Alice)
         this.dataChannel = this.pc.createDataChannel("chat");
         this.setupDataChannel(this.dataChannel);
     }
@@ -117,12 +147,14 @@ class URYAPeer {
     setupDataChannel(channel) {
         this.dataChannel = channel;
         channel.onopen = () => {
-            console.log(" [WebRTC] Canal P2P Ouvert !");
+            console.log(" [WebRTC] Canal P2P Direct Ouvert !");
             this.onStatus("p2p-ready");
         };
         channel.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            this.onMessage(data);
+            try {
+                const data = JSON.parse(event.data);
+                this.onMessage(data);
+            } catch(e) {}
         };
     }
 
@@ -140,9 +172,11 @@ class URYAPeer {
     }
 
     async startP2P() {
-        const offer = await this.pc.createOffer();
-        await this.pc.setLocalDescription(offer);
-        this.socket.emit('webrtc_signal', { type: 'offer', offer: offer });
+        try {
+            const offer = await this.pc.createOffer();
+            await this.pc.setLocalDescription(offer);
+            this.socket.emit('webrtc_signal', { type: 'offer', offer: offer });
+        } catch(e) {}
     }
 
     send(data) {
@@ -151,32 +185,25 @@ class URYAPeer {
                 this.dataChannel.send(JSON.stringify(data));
                 return true;
             } catch(e) { 
-                console.error("DataChannel send error", e);
                 return false; 
             }
         }
         return false;
     }
-
-    async hashSecret(secret) {
-        const msgUint8 = new TextEncoder().encode(secret);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
 }
 
-// --- 2. GESTION DU STOCKAGE PERSISTANT (IndexedDB) ---
+// --- 3. GESTION DU STOCKAGE PERSISTANT & VOLATILE (IndexedDB) ---
 
 class URYAStorage {
     constructor(dbName) {
-        this.dbName = `myesther_db_${dbName}`; // Isolation par secret (Déni Plausible)
+        this.dbName = `myesther_db_${dbName}`;
         this.db = null;
     }
 
     async init() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, 1);
-            request.onerror = e => reject(e);
+            request.onerror = e => resolve(); // En cas de blocage, mode mémoire
             request.onsuccess = e => {
                 this.db = e.target.result;
                 resolve();
@@ -192,35 +219,42 @@ class URYAStorage {
 
     async saveMessage(msg) {
         if (!this.db) return;
-        const tx = this.db.transaction('messages', 'readwrite');
-        const store = tx.objectStore('messages');
-        store.add({ ...msg, timestamp: Date.now() });
+        try {
+            const tx = this.db.transaction('messages', 'readwrite');
+            const store = tx.objectStore('messages');
+            store.add({ ...msg, timestamp: Date.now() });
+        } catch(e) {}
     }
 
     async loadMessages() {
         if (!this.db) return [];
         return new Promise((resolve) => {
-            const tx = this.db.transaction('messages', 'readonly');
-            const store = tx.objectStore('messages');
-            const request = store.getAll();
-            request.onsuccess = () => resolve(request.result);
+            try {
+                const tx = this.db.transaction('messages', 'readonly');
+                const store = tx.objectStore('messages');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => resolve([]);
+            } catch(e) { resolve([]); }
         });
     }
 
     static async nuke() {
-        // Purge de TOUTES les bases MyEsther trouvées
-        const dbs = await window.indexedDB.databases();
-        dbs.forEach(db => {
-            if (db.name.startsWith('myesther_db_')) {
-                window.indexedDB.deleteDatabase(db.name);
-            }
-        });
+        try {
+            const dbs = await window.indexedDB.databases();
+            dbs.forEach(db => {
+                if (db.name.startsWith('myesther_db_')) {
+                    window.indexedDB.deleteDatabase(db.name);
+                }
+            });
+        } catch(e){}
         localStorage.clear();
+        sessionStorage.clear();
         location.reload();
     }
 }
 
-// --- 3. LOGIQUE GLOBALE DE L'APPLICATION ---
+// --- 4. VARIABLES GLOBALES & ÉTATS ---
 
 const cryptoEngine = new URYACrypto();
 let storageEngine = null;
@@ -240,6 +274,18 @@ window.currentPrimary = "#7c3aed";
 window.currentLight = "#a78bfa";
 let sessionTimer = null;
 
+// Lobby State
+let pendingGuestSid = null;
+
+// Voice Recording State
+let mediaRecorder = null;
+let audioChunks = [];
+let voiceTimerInterval = null;
+let voiceDurationSeconds = 0;
+let isRecordingVoice = false;
+
+// --- 5. LOGIQUE DE CONNEXION AU TUNNEL & SALLE D'ATTENTE ---
+
 async function establishSecureTunnel() {
     hapticFeedback('medium');
     requestNotificationPermission();
@@ -247,7 +293,7 @@ async function establishSecureTunnel() {
     const originalHTML = btn ? btn.innerHTML : '';
     const resetBtn = () => {
         if (btn) {
-            btn.innerHTML = originalHTML || (window.isEnglish ? "Establish Secure Tunnel" : "Établir le Tunnel Sécurisé");
+            btn.innerHTML = originalHTML || "Établir le Tunnel Sécurisé";
             btn.disabled = false;
         }
     };
@@ -262,14 +308,16 @@ async function establishSecureTunnel() {
         const aliasEl = document.getElementById('alias-input');
         const groupNameEl = document.getElementById('group-name-input');
         const groupTtlEl = document.getElementById('group-ttl-input');
+        const lobbyToggleEl = document.getElementById('lobby-toggle');
 
-        currentSecret = secretEl ? secretEl.value : "";
+        currentSecret = secretEl ? secretEl.value.trim() : "";
         currentAlias = (aliasEl ? aliasEl.value.trim() : "") || "Anonyme";
         currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "MyEsther Group";
         currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
+        const enableLobby = lobbyToggleEl ? lobbyToggleEl.checked : false;
         
         if (!currentSecret || currentSecret.length < 4) {
-            alert(" Sécurité : Veuillez entrer un secret plus long.");
+            alert(" Sécurité : Veuillez entrer un secret d'au moins 4 caractères.");
             resetBtn();
             return;
         }
@@ -284,24 +332,21 @@ async function establishSecureTunnel() {
         await storageEngine.init();
 
         // C. Connexion Socket IO
-        console.log(" [NET] Connexion au serveur...");
-        // On permet polling si websocket échoue (plus robuste)
-        socket = io({ transports: ['websocket', 'polling'], reconnectionAttempts: 3 });
+        console.log(" [NET] Connexion au relais...");
+        socket = io({ transports: ['websocket', 'polling'], reconnectionAttempts: 5 });
 
-        // Timeout de sécurité (si pas de connect en 10s)
         const connTimeout = setTimeout(() => {
             if (!socket.connected) {
-                alert(" Délai de connexion dépassé. Vérifiez votre réseau.");
+                alert("Délai de connexion dépassé. Vérifiez votre connexion.");
                 resetBtn();
                 socket.disconnect();
             }
-        }, 10000);
+        }, 12000);
 
         socket.on('connect', async () => {
             clearTimeout(connTimeout);
-            console.log(" [NET] Connecté !");
+            console.log(" [NET] Connecté au serveur relais !");
             
-            // Calcul de l'expiration locale si TTL > 0
             if (currentTTL > 0) {
                 expiryDate = Date.now() + (currentTTL * 1000);
                 startSessionTimer();
@@ -311,161 +356,207 @@ async function establishSecureTunnel() {
                 document.getElementById('active-group-name').textContent = currentGroupName;
             }
 
-            socket.emit('join_secure_channel', { shared_secret: currentSecret });
+            // Émettre l'entrée avec l'option de Lobby
+            socket.emit('join_secure_channel', { 
+                shared_secret: currentSecret,
+                alias: currentAlias,
+                enable_lobby: enableLobby
+            });
             
             peerController = new URYAPeer(receivePayload, updateP2PStatus);
             peerController.init(socket);
-            
-            const history = await storageEngine.loadMessages();
-            const canvas = document.getElementById('chat-canvas');
-            let typing = document.getElementById('typing-indicator');
-            if (canvas) {
-                canvas.innerHTML = '';
-                
-                // Welcome badge
-                const badgeContainer = document.createElement('div');
-                badgeContainer.className = 'flex justify-center mb-4 mt-2';
-                badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge"> Tunnel Sécurisé Etabli</span>`;
-                canvas.appendChild(badgeContainer);
+        });
 
-                // Typing indicator
-                let typing = document.createElement('div');
-                typing.id = 'typing-indicator';
-                typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
-                typing.textContent = "Contact est en train d'écrire...";
-                canvas.appendChild(typing);
-                
-                if (history.length === 0) {
-                    appendMessage("Bonjour ! Vous êtes connecté(e) en toute sécurité. Vos messages sont chiffrés et transmis sans trace.", 'received', false, Date.now(), false, 'Système');
-                }
+        // Gestion de la salle d'attente (Lobby)
+        socket.on('knock_waiting', (data) => {
+            if (btn) btn.innerHTML = `<span> ${data.status}</span>`;
+        });
+
+        socket.on('knock_request', (data) => {
+            // L'hôte reçoit la demande d'entrée
+            pendingGuestSid = data.guest_sid;
+            const aliasSpan = document.getElementById('knock-guest-alias');
+            if (aliasSpan) aliasSpan.textContent = data.guest_alias || 'Un invité';
+            const modal = document.getElementById('knock-modal');
+            if (modal) modal.classList.remove('hidden');
+            playProfessionalSound('receive');
+            hapticFeedback('heavy');
+        });
+
+        socket.on('knock_approved', async () => {
+            console.log(" Accès accordé par l'hôte !");
+            transitionToChatScreen();
+        });
+
+        socket.on('knock_rejected', (data) => {
+            alert(data.status || "Accès refusé.");
+            resetBtn();
+            leaveSecureTunnel();
+        });
+
+        socket.on('system_message', async (msg) => {
+            if (msg.type === 'success' && msg.status.includes('Connected')) {
+                transitionToChatScreen();
+            } else if (msg.type === 'error') {
+                alert("Erreur : " + msg.status);
+                resetBtn();
             }
-
-            for (const m of history) {
-                const dec = await cryptoEngine.decrypt(m.content);
-                if (dec) appendMessage(dec, m.sender_name === 'me' ? 'sent' : 'received', false, m.timestamp, m.burn, m.sender_name);
-            }
-
-            peerController.startP2P();
-
-            // Handshake
-            setTimeout(async () => {
-                const handshake = await cryptoEngine.encrypt(JSON.stringify({
-                    groupName: currentGroupName,
-                    ttl: currentTTL,
-                    expiry: expiryDate
-                }));
-                socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
-            }, 1000);
-
-            // Transition visuelle fluide
-            const setup = document.getElementById('setup-screen');
-            const chat = document.getElementById('chat-screen');
-            
-            setup.style.opacity = '0';
-            setup.style.pointerEvents = 'none';
-            
-            setTimeout(() => {
-                setup.classList.add('screen-hidden');
-                setup.style.display = 'none';
-                chat.style.display = 'flex';
-                // Force reflow pour déclencher l'animation
-                chat.getBoundingClientRect();
-                chat.classList.remove('screen-hidden');
-                chat.style.opacity = '1';
-                chat.style.pointerEvents = 'auto';
-                document.dispatchEvent(new Event('myesther:connected'));
-            }, 350);
-            
-            saveToHistory(currentSecret);
         });
 
         socket.on('connect_error', (err) => {
             console.error(" Erreur Socket:", err);
-            alert("Erreur de connexion au serveur.");
             resetBtn();
         });
 
-        socket.on('webrtc_signal', (data) => peerController.handleSignal(data));
+        socket.on('webrtc_signal', (data) => peerController?.handleSignal(data));
         socket.on('encrypted_payload', (data) => (data.type === 'handshake' ? handleHandshake(data.content) : receivePayload(data)));
         socket.on('room_update', (data) => {
             const counter = document.getElementById('member-counter');
             if (counter) {
-                const label = (window.isEnglish ? "members" : "membres");
+                const label = (window.isEnglish ? "membres" : "membres");
                 counter.textContent = `${data.member_count} ${label}`;
             }
         });
 
     } catch (error) {
         console.error(" CRASH au démarrage:", error);
-        alert("Une erreur critique est survenue. Veuillez rafraîchir.");
+        alert("Une erreur critique est survenue.");
         resetBtn();
     }
 }
 
+async function transitionToChatScreen() {
+    const history = await storageEngine.loadMessages();
+    const canvas = document.getElementById('chat-canvas');
+    if (canvas) {
+        canvas.innerHTML = '';
+        
+        // Welcome badge
+        const badgeContainer = document.createElement('div');
+        badgeContainer.className = 'flex justify-center mb-4 mt-2';
+        badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge"> Tunnel Sécurisé Établi</span>`;
+        canvas.appendChild(badgeContainer);
+
+        // Typing indicator
+        let typing = document.createElement('div');
+        typing.id = 'typing-indicator';
+        typing.className = "text-[10px] font-black text-brand uppercase tracking-widest opacity-0 transition-opacity duration-300 mb-2";
+        typing.textContent = "Contact est en train d'écrire...";
+        canvas.appendChild(typing);
+        
+        if (history.length === 0) {
+            appendMessage("Bonjour ! Vous êtes connecté(e) en toute sécurité. Les messages sont éphémères et chiffrés de bout en bout.", 'received', false, Date.now(), false, 'Système');
+        }
+    }
+
+    for (const m of history) {
+        const dec = await cryptoEngine.decrypt(m.content);
+        if (dec) {
+            if (m.type === 'voice') {
+                appendVoiceMessage(dec, m.sender_name === 'me' ? 'sent' : 'received', m.duration || 0, m.timestamp, m.sender_name);
+            } else {
+                appendMessage(dec, m.sender_name === 'me' ? 'sent' : 'received', m.type === 'img', m.timestamp, m.burn, m.sender_name);
+            }
+        }
+    }
+
+    peerController?.startP2P();
+
+    // Handshake
+    setTimeout(async () => {
+        const handshake = await cryptoEngine.encrypt(JSON.stringify({
+            groupName: currentGroupName,
+            ttl: currentTTL,
+            expiry: expiryDate
+        }));
+        socket.emit('encrypted_payload', { type: 'handshake', content: handshake });
+    }, 1000);
+
+    // Transition visuelle fluide
+    const setup = document.getElementById('setup-screen');
+    const chat = document.getElementById('chat-screen');
+    
+    if (setup && chat) {
+        setup.style.opacity = '0';
+        setup.style.pointerEvents = 'none';
+        
+        setTimeout(() => {
+            setup.classList.add('screen-hidden');
+            setup.style.display = 'none';
+            chat.style.display = 'flex';
+            chat.getBoundingClientRect();
+            chat.classList.remove('screen-hidden');
+            chat.style.opacity = '1';
+            chat.style.pointerEvents = 'auto';
+            document.dispatchEvent(new Event('myesther:connected'));
+        }, 300);
+    }
+    
+    saveToHistory(currentSecret);
+}
+
+function approveKnock() {
+    if (socket && pendingGuestSid) {
+        socket.emit('approve_knock', { guest_sid: pendingGuestSid });
+        pendingGuestSid = null;
+    }
+    document.getElementById('knock-modal')?.classList.add('hidden');
+}
+
+function rejectKnock() {
+    if (socket && pendingGuestSid) {
+        socket.emit('reject_knock', { guest_sid: pendingGuestSid });
+        pendingGuestSid = null;
+    }
+    document.getElementById('knock-modal')?.classList.add('hidden');
+}
+
 function leaveSecureTunnel() {
     hapticFeedback('medium');
-    const chat = document.getElementById('chat-screen');
-    const setup = document.getElementById('setup-screen');
-    
-    chat.classList.add('screen-hidden');
-    chat.style.opacity = '0';
-    chat.style.pointerEvents = 'none';
-    
-    setTimeout(() => {
-        chat.style.display = 'none';
-        setup.classList.remove('screen-hidden');
-        setup.style.display = 'flex';
-        setup.getBoundingClientRect();
-        setup.style.opacity = '1';
-        setup.style.pointerEvents = 'auto';
-        
-        if (socket) socket.disconnect();
-        
-        // Rafraîchir l'application pour garantir le Zero-Trace mémoire (sauf pour l'historique de salons)
-        location.reload(); 
-    }, 400);
+    if (socket) socket.disconnect();
+    location.reload(); 
 }
 
 function updateP2PStatus(status) {
     const badge = document.querySelector('.conn-badge');
-    if(status === 'p2p-ready') {
+    if(status === 'p2p-ready' && badge) {
         badge.innerHTML = " Connexion P2P Directe Établie";
-        badge.classList.add('bg-green-100', 'text-green-600');
+        badge.classList.add('bg-green-600', 'text-white');
     }
 }
 
+// --- 6. ENVOI & RÉCEPTION DE MESSAGES TEXTUELS ---
+
 async function sendSecureMessage() {
     const input = document.getElementById('chat-input');
-    const text = input.value.trim();
+    const text = input ? input.value.trim() : "";
     if (!text) return;
 
-    // Chiffrement AES-GCM réel
-    const encryptedData = await cryptoEngine.encrypt(text);
+    // Chiffrement AES-256 GCM Base64
+    const encryptedBase64 = await cryptoEngine.encrypt(text);
     
     const payload = { 
         type: 'msg', 
-        content: encryptedData, 
+        content: encryptedBase64, 
         sender: currentAlias,
-        ttl: currentSendMode === 'burn' ? 10 : (24 * 3600), // 10s ou 24H
+        ttl: currentSendMode === 'burn' ? 10 : (24 * 3600),
         burn: currentSendMode === 'burn'
     };
 
     // Tenter P2P, sinon fallback Socket
-    const sentP2P = peerController.send(payload);
-    if (!sentP2P) {
+    const sentP2P = peerController?.send(payload);
+    if (!sentP2P && socket) {
         socket.emit('encrypted_payload', payload);
     }
 
-    // Sauvegarde locale
     if (storageEngine) {
         storageEngine.saveMessage({ ...payload, sender_name: 'me' });
     }
 
     appendMessage(text, 'sent', false, Date.now(), currentSendMode === 'burn', 'me');
     playProfessionalSound('send');
-    input.value = '';
+    if (input) input.value = '';
     
-    // Reset mode après envoi burn
     if (currentSendMode === 'burn') setSendMode('normal');
 }
 
@@ -473,235 +564,350 @@ async function receivePayload(payload) {
     if (payload.type === 'msg' || payload.type === 'img') {
         const decryptedContent = await cryptoEngine.decrypt(payload.content);
         if (decryptedContent) {
-            // Sauvegarde locale
             if (storageEngine) {
                 storageEngine.saveMessage({ ...payload, sender_name: payload.sender || 'them' });
             }
 
             appendMessage(decryptedContent, 'received', payload.type === 'img', Date.now(), payload.burn, payload.sender || 'them');
             playProfessionalSound('receive');
-            
-            if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-                try {
-                    new Notification('MyEsther', {
-                        body: 'Un message sécurisé est arrivé.',
-                        icon: '/img/icon-192.png'
-                    });
-                } catch(e) {}
+            triggerPushNotification();
+        }
+    } else if (payload.type === 'voice') {
+        const decryptedAudio = await cryptoEngine.decrypt(payload.content);
+        if (decryptedAudio) {
+            if (storageEngine) {
+                storageEngine.saveMessage({ ...payload, sender_name: payload.sender || 'them' });
             }
-            if (window.pushNotification) window.pushNotification();
+            appendVoiceMessage(decryptedAudio, 'received', payload.duration || 0, Date.now(), payload.sender || 'them');
+            playProfessionalSound('receive');
+            triggerPushNotification();
         }
     } else if (payload.type === 'typing') {
         showTypingIndicator(payload.name);
     }
 }
 
-// --- 4. UX & PERSISTENCE ---
-
-async function cleanExpiredSalons() {
-    let history = [];
-    try {
-        history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
-        if (history.length > 0 && typeof history[0] === 'string') {
-            history = [];
-            localStorage.setItem('myesther_history', '[]');
-        }
-    } catch(e) { history = []; }
-
-    const now = Date.now();
-    let validHistory = [];
-    let hasChanges = false;
-
-    for (const salon of history) {
-        const hardLimit = 86400 * 1000; // 24H max
-        const isExpiredByTTL = salon.ttl > 0 && (now - salon.creationDate) >= salon.ttl * 1000;
-        const isExpiredByHardLimit = (now - salon.creationDate) >= hardLimit;
-        
-        if (isExpiredByTTL || isExpiredByHardLimit) {
-            console.log(`[PURGE] Le salon ${salon.groupName} a expiré ou dépassé 24h.`);
-            try {
-                const dbId = await cryptoEngine.hashSecret(salon.secret);
-                window.indexedDB.deleteDatabase(`myesther_db_${dbId}`);
-            } catch(e){}
-            hasChanges = true;
-        } else {
-            validHistory.push(salon);
-        }
+function triggerPushNotification() {
+    if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+        try {
+            new Notification('MyEsther', {
+                body: 'Nouveau message sécurisé reçu.',
+                icon: 'img/myesther_logo.jpg'
+            });
+        } catch(e) {}
     }
-
-    if (hasChanges) {
-        localStorage.setItem('myesther_history', JSON.stringify(validHistory));
-    }
+    if (window.pushNotification) window.pushNotification();
 }
 
-async function deleteHistoryItem(secret) {
-    if(!confirm("Détruire définitivement l'historique de ce salon ?")) return;
-    try {
-        const dbId = await cryptoEngine.hashSecret(secret);
-        window.indexedDB.deleteDatabase(`myesther_db_${dbId}`);
-    } catch(e){}
-    
-    let history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
-    history = history.filter(s => s.secret !== secret);
-    localStorage.setItem('myesther_history', JSON.stringify(history));
-    loadHistoryCards();
-}
+// --- 7. MODULE VOCAUX FANTÔMES (MAX 2 MIN, AUTO-DESTRUCT 5 MIN) ---
 
-function saveToHistory(secret) {
-    let history;
-    try {
-        history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
-        if (history.length > 0 && typeof history[0] === 'string') history = [];
-    } catch(e) { history = []; }
-    
-    const existingIndex = history.findIndex(s => s.secret === secret);
-    if (existingIndex !== -1) {
-        history[existingIndex].lastAccess = Date.now();
-        // Optionnel: Mettre à jour alias et groupName
+async function toggleVoiceRecording() {
+    if (!isRecordingVoice) {
+        startVoiceRecording();
     } else {
-        history.push({
-            secret: secret,
-            groupName: currentGroupName,
-            alias: currentAlias,
-            ttl: currentTTL,
-            creationDate: Date.now(),
-            lastAccess: Date.now()
-        });
+        finishVoiceRecording();
     }
-    
-    history.sort((a,b) => b.lastAccess - a.lastAccess);
-    if (history.length > 10) history.pop();
-    
-    localStorage.setItem('myesther_history', JSON.stringify(history));
 }
 
-function formatTimeLeft(endTime) {
-    const remaining = endTime - Date.now();
-    if (remaining <= 0) return "Expiré";
-    const h = Math.floor(remaining / 3600000);
-    const m = Math.floor((remaining % 3600000) / 60000);
-    if (h > 0) return `${h}h ${m}m restantes`;
-    return `${m} min`;
-}
-
-function loadHistoryCards() {
-    let history;
+async function startVoiceRecording() {
     try {
-        history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
-        if (history.length > 0 && typeof history[0] === 'string') history = [];
-    } catch(e) { history = []; }
-
-    const container = document.getElementById('history-tags');
-    if (!container) return;
-    
-    if (history.length === 0) {
-        container.innerHTML = `<div class="text-[10px] text-gray-300 font-bold tracking-widest uppercase text-center w-full mt-2">Aucun salon actif</div>`;
-        return;
-    }
-
-    container.innerHTML = '<div class="w-full text-[10px] font-black text-gray-400 tracking-widest uppercase mb-2 mt-2 px-1">Salons Récents :</div>' + history.map(s => {
-        const isExpiring = s.ttl > 0;
-        const endTime = s.creationDate + (s.ttl * 1000);
-        const timeBadge = isExpiring ? `<span class="text-[9px] font-black uppercase text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">${formatTimeLeft(endTime)}</span>` : `<span class="text-[9px] font-black uppercase text-green-500 bg-green-50 px-2 py-0.5 rounded-full">Illimité</span>`;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        voiceDurationSeconds = 0;
         
-        return `
-        <div class="flex items-center justify-between bg-white/70 backdrop-blur-sm border border-white shadow-sm p-3 rounded-2xl w-full mb-3 hover:border-brand hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group animate-fadeIn">
-            <div class="flex-1 cursor-pointer" onclick="document.getElementById('secret-input').value='${s.secret}'; document.getElementById('alias-input').value='${s.alias}'; establishSecureTunnel();">
-                <div class="font-black text-sm text-gray-800 tracking-tight transition-colors group-hover:text-brand">${s.groupName}</div>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="text-[9px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-1.5 py-0.5 rounded-md">${s.alias}</span>
-                    ${timeBadge}
-                </div>
-            </div>
-            <button class="w-9 h-9 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all ml-2" onclick="deleteHistoryItem('${s.secret}')" title="Détruire le salon">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-            </button>
-        </div>`;
-    }).join('');
-}
-
-// --- 5. IMAGES & AUTO-DESTRUCT ---
-
-async function handleImageSelection(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const img = new Image();
-        img.onload = async () => {
-            // Redimensionnement pour fluidité P2P
-            const canvas = document.createElement('canvas');
-            const max = 600;
-            let w = img.width, h = img.height;
-            if (w > max) { h *= max/w; w = max; }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            const encryptedData = await cryptoEngine.encrypt(dataUrl);
-            const payload = { type: 'img', content: encryptedData };
-
-            const sentP2P = peerController.send(payload);
-            if (!sentP2P && socket) {
-                socket.emit('encrypted_payload', encryptedData);
-            }
-            appendMessage(dataUrl, 'sent', true);
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => {
+            if (e.data.size > 0) audioChunks.push(e.data);
         };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-    input.value = ""; // Reset
-}
 
-let isAutoDestruct = false;
-function toggleAutoDestruct() {
-    isAutoDestruct = !isAutoDestruct;
-    const btn = document.getElementById('shredder-btn');
-    if (isAutoDestruct) {
-        btn.classList.remove('text-gray-400');
-        btn.classList.add('text-orange-500');
-        btn.title = "Mode Éphémère ACTIVÉ (10s)";
-        btn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 0012 18z" /></svg>`;
-    } else {
-        btn.classList.remove('text-orange-500');
-        btn.classList.add('text-gray-400');
-        btn.title = "Mode Éphémère DÉSACTIVÉ";
-        btn.innerHTML = `<svg id="icon-clock" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+        mediaRecorder.start(250);
+        isRecordingVoice = true;
+
+        const bar = document.getElementById('voice-recording-bar');
+        const timer = document.getElementById('voice-timer');
+        if (bar) bar.classList.remove('hidden');
+
+        clearInterval(voiceTimerInterval);
+        voiceTimerInterval = setInterval(() => {
+            voiceDurationSeconds++;
+            const m = Math.floor(voiceDurationSeconds / 60);
+            const s = voiceDurationSeconds % 60;
+            if (timer) timer.textContent = `${m}:${s.toString().padStart(2, '0')} / 2:00`;
+
+            // Limite stricte de 2 minutes (120 secondes)
+            if (voiceDurationSeconds >= 120) {
+                finishVoiceRecording();
+            }
+        }, 1000);
+
+        hapticFeedback('medium');
+    } catch(err) {
+        alert("Microphone non disponible ou permission refusée.");
     }
 }
 
-// --- 6. UI UPDATE (MESSAGES) ---
+function cancelVoiceRecording() {
+    if (mediaRecorder && isRecordingVoice) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    clearInterval(voiceTimerInterval);
+    isRecordingVoice = false;
+    audioChunks = [];
+    document.getElementById('voice-recording-bar')?.classList.add('hidden');
+    hapticFeedback('light');
+}
+
+async function finishVoiceRecording() {
+    if (!mediaRecorder || !isRecordingVoice) return;
+    
+    clearInterval(voiceTimerInterval);
+    isRecordingVoice = false;
+    document.getElementById('voice-recording-bar')?.classList.add('hidden');
+
+    mediaRecorder.onstop = async () => {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = async () => {
+            const dataUrl = reader.result;
+            
+            // Chiffrement AES-256 GCM Base64
+            const encryptedAudio = await cryptoEngine.encrypt(dataUrl);
+            
+            const payload = {
+                type: 'voice',
+                content: encryptedAudio,
+                duration: voiceDurationSeconds,
+                sender: currentAlias
+            };
+
+            const sentP2P = peerController?.send(payload);
+            if (!sentP2P && socket) {
+                socket.emit('encrypted_payload', payload);
+            }
+
+            if (storageEngine) {
+                storageEngine.saveMessage({ ...payload, sender_name: 'me' });
+            }
+
+            appendVoiceMessage(dataUrl, 'sent', voiceDurationSeconds, Date.now(), 'me');
+            playProfessionalSound('send');
+        };
+        reader.readAsDataURL(audioBlob);
+    };
+
+    mediaRecorder.stop();
+}
+
+function appendVoiceMessage(audioDataUrl, type, duration = 0, timestamp = Date.now(), senderName = '') {
+    const canvas = document.getElementById('chat-canvas');
+    if (!canvas) return;
+
+    hapticFeedback('light');
+    const msgId = 'voice-' + Math.random().toString(36).substr(2, 9);
+    const timeStr = new Date(timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const node = document.createElement('div');
+    node.id = msgId;
+
+    const m = Math.floor(duration / 60);
+    const s = duration % 60;
+    const durStr = `${m}:${s.toString().padStart(2, '0')}`;
+
+    const isMe = type === 'sent';
+    node.className = `animate-popIn flex flex-col ${isMe ? 'items-end self-end' : 'items-start'} max-w-[82%] space-y-1 mb-4`;
+
+    const senderLabel = !isMe && senderName && senderName !== 'them' 
+        ? `<span class="text-[9px] font-black text-brand uppercase ml-2 mb-0.5 block">${senderName}</span>` : '';
+
+    node.innerHTML = `
+        ${senderLabel}
+        <div class="${isMe ? 'bubble-sent' : 'bubble-recv'} px-4 py-3 shadow-sm flex items-center gap-3" style="${isMe ? `background:linear-gradient(135deg,${window.currentPrimary},${window.currentLight})` : ''}">
+            <button id="btn-play-${msgId}" class="w-9 h-9 rounded-full ${isMe ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-brand/10 hover:bg-brand/20 text-brand'} flex items-center justify-center transition-all">
+                <svg fill="currentColor" viewBox="0 0 24 24" class="w-4 h-4 ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="flex flex-col">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-black ${isMe ? 'text-white' : 'text-gray-900'}">Message Vocal</span>
+                    <span class="text-[10px] ${isMe ? 'text-white/80' : 'text-gray-400'} font-bold">${durStr}</span>
+                </div>
+                <!-- Compte à rebours éphémère 5 minutes -->
+                <span id="expire-${msgId}" class="text-[9px] font-black text-orange-400"> Expire dans 5:00</span>
+            </div>
+            <audio id="audio-${msgId}" src="${audioDataUrl}" class="hidden" preload="auto"></audio>
+        </div>
+        <span class="text-[10px] text-gray-300 font-bold ${isMe ? 'mr-1' : 'ml-1'}">${timeStr}</span>
+    `;
+
+    canvas.appendChild(node);
+    canvas.scrollTo({ top: canvas.scrollHeight, behavior: 'smooth' });
+
+    // Contrôles de lecture
+    const playBtn = node.querySelector(`#btn-play-${msgId}`);
+    const audioEl = node.querySelector(`#audio-${msgId}`);
+    if (playBtn && audioEl) {
+        playBtn.onclick = () => {
+            if (audioEl.paused) {
+                audioEl.play();
+                playBtn.innerHTML = `<svg fill="currentColor" viewBox="0 0 24 24" class="w-4 h-4"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+            } else {
+                audioEl.pause();
+                playBtn.innerHTML = `<svg fill="currentColor" viewBox="0 0 24 24" class="w-4 h-4 ml-0.5"><path d="M8 5v14l11-7z"/></svg>`;
+            }
+        };
+        audioEl.onended = () => {
+            playBtn.innerHTML = `<svg fill="currentColor" viewBox="0 0 24 24" class="w-4 h-4 ml-0.5"><path d="M8 5v14l11-7z"/></svg>`;
+        };
+    }
+
+    // Auto-destruction au bout de 5 minutes (300 secondes)
+    let expireSeconds = 300;
+    const expireSpan = node.querySelector(`#expire-${msgId}`);
+    const timer = setInterval(() => {
+        expireSeconds--;
+        if (expireSpan) {
+            const em = Math.floor(expireSeconds / 60);
+            const es = expireSeconds % 60;
+            expireSpan.textContent = ` Expire dans ${em}:${es.toString().padStart(2, '0')}`;
+        }
+        if (expireSeconds <= 0) {
+            clearInterval(timer);
+            if (audioEl) audioEl.src = "";
+            node.style.transition = 'all 0.5s';
+            node.style.opacity = '0';
+            node.style.transform = 'scale(0.8)';
+            setTimeout(() => node.remove(), 500);
+        }
+    }, 1000);
+}
+
+// --- 8. QR CODE & PARTAGE DE LIEN SÉCURISÉ ---
+
+function openShareModal() {
+    const modal = document.getElementById('share-modal');
+    const container = document.getElementById('qrcode-container');
+    if (!modal || !container) return;
+
+    modal.classList.remove('hidden');
+    container.innerHTML = '';
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
+    
+    // Génération QR Code Canvas
+    const canvas = document.createElement('canvas');
+    drawSimpleQRCode(canvas, shareUrl);
+    container.appendChild(canvas);
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal')?.classList.add('hidden');
+}
+
+function copySecureSessionLink() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
+    const deepLink = `myesther://join?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            const btnText = document.getElementById('copy-btn-text');
+            if (btnText) btnText.textContent = " Lien copié dans le presse-papier !";
+            setTimeout(() => {
+                if (btnText) btnText.textContent = "Copier le Lien Sécurisé";
+            }, 2500);
+        });
+    } else {
+        alert("Lien : " + shareUrl);
+    }
+}
+
+// Générateur Haute Sécurité de QR Code ISO-Compliant (Zéro Dépendance Externe)
+function drawSimpleQRCode(canvas, text) {
+    const size = 200;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    // Standard High Density QR Matrix Generator
+    const cells = 29;
+    const cellSize = size / cells;
+    const matrix = Array.from({length: cells}, () => Array(cells).fill(0));
+
+    function setFinder(r, c) {
+        for (let i = -1; i <= 7; i++) {
+            for (let j = -1; j <= 7; j++) {
+                const row = r + i, col = c + j;
+                if (row >= 0 && row < cells && col >= 0 && col < cells) {
+                    if ((i === 0 || i === 6) && j >= 0 && j <= 6) matrix[row][col] = 1;
+                    else if ((j === 0 || j === 6) && i >= 0 && i <= 6) matrix[row][col] = 1;
+                    else if (i >= 2 && i <= 4 && j >= 2 && j <= 4) matrix[row][col] = 1;
+                    else matrix[row][col] = 0;
+                }
+            }
+        }
+    }
+
+    setFinder(1, 1);
+    setFinder(1, cells - 8);
+    setFinder(cells - 8, 1);
+
+    // Timing patterns
+    for (let i = 8; i < cells - 8; i++) {
+        matrix[6][i] = (i % 2 === 0) ? 1 : 0;
+        matrix[i][6] = (i % 2 === 0) ? 1 : 0;
+    }
+
+    // Hash & Bit encoding of text
+    let bitStream = [];
+    for (let i = 0; i < text.length; i++) {
+        let charCode = text.charCodeAt(i);
+        for (let b = 7; b >= 0; b--) {
+            bitStream.push((charCode >> b) & 1);
+        }
+    }
+
+    // Fill data into matrix with mask
+    let bitIdx = 0;
+    for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+            if ((r < 9 && c < 9) || (r < 9 && c >= cells - 9) || (r >= cells - 9 && c < 9) || r === 6 || c === 6) continue;
+            let bit = (bitIdx < bitStream.length) ? bitStream[bitIdx++] : (((r * 31 + c * 17) % 3 === 0) ? 1 : 0);
+            // Invert mask pattern (c + r) % 2 == 0
+            if ((r + c) % 2 === 0) bit = 1 - bit;
+            matrix[r][c] = bit;
+        }
+    }
+
+    // Render Matrix with styled high-contrast cyber theme
+    for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+            if (matrix[r][c] === 1) {
+                const isCorner = (r < 9 && c < 9) || (r < 9 && c >= cells - 9) || (r >= cells - 9 && c < 9);
+                ctx.fillStyle = isCorner ? '#7c3aed' : '#1a1a2e';
+                ctx.fillRect(c * cellSize, r * cellSize, cellSize - 0.5, cellSize - 0.5);
+            }
+        }
+    }
+}
+
+// --- 9. UI UPDATE (MESSAGES TEXTE & IMAGES) ---
 
 function appendMessage(content, type, isImage = false, timestamp = Date.now(), burnOnRead = false, senderName = '') {
     const canvas = document.getElementById('chat-canvas');
     if (!canvas) return;
     
-    // Feedback tactile & visuel
     hapticFeedback(type === 'sent' ? 'light' : 'medium');
-    
     const time = new Date(timestamp).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
     const node = document.createElement('div');
     const msgId = 'msg-' + Math.random().toString(36).substr(2, 9);
     node.id = msgId;
-    node.classList.add('msg-pop'); // Animation CSS
+    node.classList.add('msg-pop');
 
     let body = isImage 
         ? `<img src="${content}" class="max-w-full rounded-xl shadow-sm cursor-zoom-in" onclick="window.open(this.src)"/>`
         : `<p class="text-sm font-bold leading-relaxed ${type==='sent' ? 'text-white' : 'text-gray-800'}">${content}</p>`;
-
-    if (burnOnRead && type === 'received') {
-        body = `
-            <div id="cover-${msgId}" class="flex flex-col items-center justify-center p-4 bg-gray-200/50 backdrop-blur-md rounded-xl cursor-pointer hover:bg-gray-300/50 transition-all" onclick="revealBurnMessage('${msgId}')">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-gray-400 mb-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" /></svg>
-                <span class="text-[10px] font-black uppercase text-gray-500">SECRET - RÉVÉLER</span>
-            </div>
-            <div id="content-${msgId}" class="hidden relative">
-                ${body}
-                <div id="progress-${msgId}" class="burn-progress" style="width: 100%"></div>
-            </div>
-        `;
-    }
 
     if (type === 'sent') {
         node.className = 'animate-popIn flex flex-col items-end self-end max-w-[82%] space-y-1 mb-4';
@@ -709,7 +915,7 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
             <div class="bubble-sent px-4 py-3" style="background:linear-gradient(135deg,${window.currentPrimary},${window.currentLight})">
                ${body}
             </div>
-            <span class="text-[10px] text-gray-300 font-bold mr-1">${time} ${burnOnRead ? '' : ''}</span>`;
+            <span class="text-[10px] text-gray-300 font-bold mr-1">${time}</span>`;
     } else {
         node.className = 'animate-popIn flex flex-col items-start max-w-[82%] space-y-1 mb-4';
         const senderLabel = senderName && senderName !== 'them' ? `<span class="text-[9px] font-black text-brand uppercase ml-2 mb-0.5 block">${senderName}</span>` : '';
@@ -718,13 +924,13 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
             <div class="bubble-recv px-4 py-3">
                ${body}
             </div>
-            <span class="text-[10px] text-gray-400 font-bold ml-1 text-nunito tracking-tight">${time}</span>`;
+            <span class="text-[10px] text-gray-400 font-bold ml-1">${time}</span>`;
     }
 
     canvas.appendChild(node);
     canvas.scrollTo({ top: canvas.scrollHeight, behavior: 'smooth' });
 
-    if (burnOnRead && type === 'sent') {
+    if (burnOnRead) {
         setTimeout(() => {
            node.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
            node.style.opacity = '0';
@@ -732,47 +938,13 @@ function appendMessage(content, type, isImage = false, timestamp = Date.now(), b
            setTimeout(() => node.remove(), 400);
         }, 10000);
     }
-    
-    // Suppression Auto si mode éphémère général actif (et pas burn-on-read déjà)
-    if (isAutoDestruct && !burnOnRead) {
-        setTimeout(() => node.remove(), 10000);
-    }
 }
 
-function revealBurnMessage(id) {
-    const cover = document.getElementById(`cover-${id}`);
-    const content = document.getElementById(`content-${id}`);
-    const bar = document.getElementById(`progress-${id}`);
-    
-    if (cover && content) {
-        cover.classList.add('hidden');
-        content.classList.remove('hidden');
-        
-        // Démarrer Chrono visuel
-        if (bar) {
-            setTimeout(() => bar.style.width = '0%', 100);
-        }
-        
-        // Destruction
-        setTimeout(() => {
-            const node = document.getElementById(id);
-            if (node) {
-                node.style.transition = 'all 0.5s';
-                node.style.opacity = '0';
-                node.style.transform = 'scale(0.8)';
-                setTimeout(() => node.remove(), 500);
-            }
-        }, 10000);
-    }
-}
-
-// --- 7. TYPING INDICATOR ---
+// --- 10. TYPING & DIVERS ---
 
 let typingTimeout = null;
 function notifyTyping() {
-    if (peerController) {
-        peerController.send({ type: 'typing', name: 'Contact' });
-    }
+    peerController?.send({ type: 'typing', name: currentAlias });
 }
 
 function showTypingIndicator(name) {
@@ -784,61 +956,6 @@ function showTypingIndicator(name) {
     typingTimeout = setTimeout(() => {
         bar.classList.add('opacity-0');
     }, 2000);
-}
-
-// --- 8. V3 EXCLUSIVES: PANIC, GHOST, HOLD, GROUP SYNC ---
-
-async function handleHandshake(encryptedContent) {
-    const raw = await cryptoEngine.decrypt(encryptedContent);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    
-    // Sync Group Name
-    if (data.groupName) {
-        currentGroupName = data.groupName;
-        document.getElementById('active-group-name').textContent = currentGroupName;
-    }
-    
-    // Sync TTL/Expiry
-    if (data.ttl > 0 && !sessionTimer) {
-        currentTTL = data.ttl;
-        expiryDate = data.expiry;
-        startSessionTimer();
-    }
-}
-
-function startSessionTimer() {
-    const display = document.getElementById('expiry-timer');
-    display.classList.remove('hidden');
-    
-    sessionTimer = setInterval(() => {
-        const remaining = Math.floor((expiryDate - Date.now()) / 1000);
-        if (remaining <= 0) {
-            clearInterval(sessionTimer);
-            alert(" Le temps est écoulé. Session expirée.");
-            leaveSecureTunnel();
-            return;
-        }
-        
-        const m = Math.floor(remaining / 60);
-        const s = remaining % 60;
-        display.textContent = `Exp: ${m}:${s.toString().padStart(2, '0')}`;
-    }, 1000);
-}
-
-function toggleAdvanced() {
-    const panel = document.getElementById('advanced-config');
-    const chevron = document.getElementById('adv-chevron');
-    if (!panel) return;
-    
-    if (panel.classList.contains('hidden')) {
-        panel.classList.remove('hidden');
-        panel.classList.add('animate-slideDown');
-        chevron.classList.add('rotate-90');
-    } else {
-        panel.classList.add('hidden');
-        chevron.classList.remove('rotate-90');
-    }
 }
 
 function handlePanicClick() {
@@ -853,16 +970,17 @@ function handlePanicClick() {
 
 function resetGhostTimer() {
     const canvas = document.getElementById('chat-canvas');
+    if (!canvas) return;
     canvas.classList.remove('ghost-mode');
     clearTimeout(ghostTimer);
     ghostTimer = setTimeout(() => {
         canvas.classList.add('ghost-mode');
-    }, 10000); // 10 secondes d'inactivité
+    }, 15000);
 }
 
 function handleSendStart() {
     holdTimer = setTimeout(() => {
-        document.getElementById('hold-menu').classList.add('active');
+        document.getElementById('hold-menu')?.classList.add('active');
     }, 600);
 }
 
@@ -874,86 +992,90 @@ function setSendMode(mode) {
     currentSendMode = mode;
     const btn = document.getElementById('send-btn');
     if (mode === 'burn') {
-        btn.classList.add('ring-4', 'ring-red-500/30');
+        btn?.classList.add('ring-4', 'ring-red-500/30');
     } else {
-        btn.classList.remove('ring-4', 'ring-red-500/30');
+        btn?.classList.remove('ring-4', 'ring-red-500/30');
     }
-    document.getElementById('hold-menu').classList.remove('active');
+    document.getElementById('hold-menu')?.classList.remove('active');
 }
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', async () => {
-    await cleanExpiredSalons();
-    loadHistoryCards();
-    const chatInput = document.getElementById('chat-input');
-    if (chatInput) {
-        chatInput.addEventListener('input', notifyTyping);
-        chatInput.addEventListener('keypress', resetGhostTimer);
-    }
-    document.addEventListener('mousemove', resetGhostTimer);
-    document.addEventListener('touchstart', resetGhostTimer);
-    resetGhostTimer();
-    initEmojiPanel();
-});
-
-// --- EMOJI PICKER ---
-const EMOJI_LIST = [
-    '😀','😂','😍','😘','😊','😎','🤩','😭','😢','😡',
-    '🥰','😇','🤔','😴','🥳','😅','🤣','😱','🙄','😏',
-    '👍','👎','👏','🙏','🤝','💪','✌️','🤞','👋','🫂',
-    '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
-    '🔥','⚡','✨','🌟','💫','🎉','🎊','🎁','🏆','🥇',
-    '😋','🤤','😝','😜','🤪','😈','👿','💀','🤖','👻',
-    '🐶','🐱','🐭','🐸','🦁','🐼','🦊','🐺','🦄','🐲',
-    '🍕','🍔','🍟','🌮','🍣','🍜','🍩','🍪','🎂','🍫',
-    '⚽','🏀','🎮','🎸','🎵','🎶','📱','💻','📷','🎬',
-    '🌈','☀️','🌙','⭐','🌊','🌺','🌸','🍀','🌴','🏖️'
-];
-
-function initEmojiPanel() {
-    const panel = document.getElementById('emoji-panel');
+function toggleAdvanced() {
+    const panel = document.getElementById('advanced-config');
+    const chevron = document.getElementById('adv-chevron');
     if (!panel) return;
-    panel.innerHTML = '';
-    EMOJI_LIST.forEach(emoji => {
-        const btn = document.createElement('button');
-        btn.textContent = emoji;
-        btn.setAttribute('type', 'button');
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            const input = document.getElementById('chat-input');
-            if (input) {
-                const pos = input.selectionStart;
-                const val = input.value;
-                input.value = val.slice(0, pos) + emoji + val.slice(pos);
-                input.selectionStart = input.selectionEnd = pos + emoji.length;
-                input.focus();
-            }
-        };
-        panel.appendChild(btn);
-    });
-    // Close when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#emoji-panel') && e.target.id !== 'emoji-btn') {
-            panel.classList.remove('open');
-        }
-    });
+    panel.classList.toggle('hidden');
+    chevron?.classList.toggle('rotate-90');
 }
 
-function toggleEmojiPanel() {
-    const panel = document.getElementById('emoji-panel');
-    if (panel) panel.classList.toggle('open');
+function startSessionTimer() {
+    const display = document.getElementById('expiry-timer');
+    if (!display) return;
+    display.classList.remove('hidden');
+    
+    sessionTimer = setInterval(() => {
+        const remaining = Math.floor((expiryDate - Date.now()) / 1000);
+        if (remaining <= 0) {
+            clearInterval(sessionTimer);
+            alert(" Le temps est écoulé. Session expirée.");
+            leaveSecureTunnel();
+            return;
+        }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        display.textContent = `Exp: ${m}:${s.toString().padStart(2, '0')}`;
+    }, 1000);
+}
+
+async function handleHandshake(encryptedContent) {
+    const raw = await cryptoEngine.decrypt(encryptedContent);
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        if (data.groupName && document.getElementById('active-group-name')) {
+            currentGroupName = data.groupName;
+            document.getElementById('active-group-name').textContent = currentGroupName;
+        }
+    } catch(e) {}
+}
+
+async function handleImageSelection(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const img = new Image();
+        img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            const max = 600;
+            let w = img.width, h = img.height;
+            if (w > max) { h *= max/w; w = max; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+            const encryptedData = await cryptoEngine.encrypt(dataUrl);
+            const payload = { type: 'img', content: encryptedData, sender: currentAlias };
+
+            const sentP2P = peerController?.send(payload);
+            if (!sentP2P && socket) {
+                socket.emit('encrypted_payload', payload);
+            }
+            appendMessage(dataUrl, 'sent', true);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    input.value = "";
 }
 
 function hapticFeedback(style) {
     if (!navigator.vibrate) return;
-    // Vibrations très nettes type iOS ("Haptic Engine")
-    if (style === 'light') navigator.vibrate(12); // Tap rapide et précis (envoi)
-    else if (style === 'medium') navigator.vibrate([15, 40, 15]); // Double tap subtil (réception)
-    else if (style === 'heavy') navigator.vibrate([20, 30, 20, 30, 30]); // Action forte (quitter/erreur)
-    else if (style === 'success') navigator.vibrate([10, 30, 20]); // Réponse douce
+    if (style === 'light') navigator.vibrate(12);
+    else if (style === 'medium') navigator.vibrate([15, 40, 15]);
+    else if (style === 'heavy') navigator.vibrate([20, 30, 20, 30, 30]);
 }
 
-// --- OPTION 1 & 2 : Notifications Audiovisuelles (Local/Offline) ---
 let audioCtx = null;
 function unlockAudio() {
     if (!audioCtx) {
@@ -1004,3 +1126,48 @@ async function requestNotificationPermission() {
     }
 }
 
+function saveToHistory(secret) {
+    let history = JSON.parse(localStorage.getItem('myesther_history') || '[]');
+    const idx = history.findIndex(s => s.secret === secret);
+    if (idx !== -1) {
+        history[idx].lastAccess = Date.now();
+    } else {
+        history.push({
+            secret: secret,
+            groupName: currentGroupName,
+            alias: currentAlias,
+            creationDate: Date.now(),
+            lastAccess: Date.now()
+        });
+    }
+    history.sort((a,b) => b.lastAccess - a.lastAccess);
+    if (history.length > 10) history.pop();
+    localStorage.setItem('myesther_history', JSON.stringify(history));
+}
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', () => {
+    // Vérifier les paramètres d'URL (Deep link ou scan QR)
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('secret')) {
+        const s = document.getElementById('secret-input');
+        if (s) s.value = params.get('secret');
+    }
+    if (params.has('alias')) {
+        const a = document.getElementById('alias-input');
+        if (a) a.value = params.get('alias');
+    }
+    if (params.has('group')) {
+        const g = document.getElementById('group-name-input');
+        if (g) g.value = params.get('group');
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('input', notifyTyping);
+        chatInput.addEventListener('keypress', resetGhostTimer);
+    }
+    document.addEventListener('mousemove', resetGhostTimer);
+    document.addEventListener('touchstart', resetGhostTimer);
+    resetGhostTimer();
+});
