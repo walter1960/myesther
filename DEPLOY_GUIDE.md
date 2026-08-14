@@ -1,31 +1,37 @@
-# 🚀 Guide de Mise en Ligne : MyEsther sur Render.com
+# Guide de Déploiement Officiel : MyEsther
 
-Ce guide vous explique comment rendre votre application accessible partout dans le monde en moins de 5 minutes.
+## URL de Production Officielle
+* **Serveur Relais & Web App** : `https://myesther-m7y9.onrender.com`
+* **Dépôt GitHub Lié** : `https://github.com/walter1960/myesther` (Branche `master`)
 
-## Étape 1 : Mettre le code sur GitHub
-1. Connectez-vous sur [GitHub.com](https://github.com/).
-2. Créez un nouveau dépôt (Repository) nommé `myesther`.
-3. Allez dans le dossier `/home/walter/Trainings/Artificial Intelligence/stage URYA/URYA_Neural_Cryptography_Complete/PROJET_URYA_FINAL/MyEsther_Production` sur votre ordinateur.
-4. Glissez-déposez **tout le contenu** de ce dossier (le fichier `server.py`, le dossier `frontend`, etc.) dans votre dépôt GitHub.
-5. Cliquez sur **"Commit changes"**.
+---
 
-## Étape 2 : Lier à Render.com
-1. Allez sur [Render.com](https://render.com/) et créez un compte gratuit (utilisez votre compte GitHub pour aller plus vite).
-2. Cliquez sur le bouton bleu **"New +"** puis choisissez **"Web Service"**.
-3. Sélectionnez votre dépôt GitHub `myesther`.
-4. Dans la configuration, remplissez ces champs :
-   - **Name :** `myesther`
-   - **Runtime :** `Python 3`
-   - **Build Command :** `pip install -r requirements.txt`
-   - **Start Command :** `gunicorn -k eventlet -w 1 server:app`
-5. Cliquez sur **"Create Web Service"**.
+## 1. Comment déployer la dernière version sur Render
 
-## Étape 3 : C'est en ligne !
-Render va prendre 1 ou 2 minutes pour tout installer. Une fois terminé, il vous donnera une adresse du type :
-`https://myesther-votre-nom.onrender.com`
+Comme votre service Render est déjà connecté à votre GitHub :
 
-> [!TIP]
-> Votre application sera alors accessible sur PC, Android et iPhone 24h/24 !
+1. Ouvrez votre terminal et poussez les dernières modifications :
+```bash
+git add .
+git commit -m "RELEASE: MyEsther Ghost Edition - Vocaux, Lobby, Interopérabilité AES et Nouveau Logo"
+git push origin master
+```
+2. Render va détecter le nouveau commit (`master`) et relancer automatiquement le déploiement en 1 minute.
+3. Dès que le statut passe à **Live (Vert)** sur votre Dashboard Render, le serveur est à jour !
 
-> [!IMPORTANT]
-> Sur Render (version gratuite), le serveur s'endort après 15 minutes d'inactivité. Il suffit de réouvrir le lien pour qu'il se réveille en quelques secondes.
+---
+
+## 2. Comment générer l'APK / AAB pour le Play Store
+
+L'application Android est déjà configurée pour pointer vers `https://myesther-m7y9.onrender.com`.
+
+Dans le dossier `MyEsther-Android/` :
+```bash
+# Pour générer le bundle de publication Google Play Store (.aab) :
+./gradlew bundlePlayStoreRelease
+
+# Ou pour générer l'APK direct à tester sur votre téléphone :
+./gradlew assemblePlayStoreRelease
+```
+Le fichier généré sera dans `app/build/outputs/`.
+Il ne vous reste plus qu'à le téléverser sur la Google Play Console !
