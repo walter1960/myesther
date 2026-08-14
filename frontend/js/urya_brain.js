@@ -561,6 +561,13 @@ async function sendSecureMessage() {
 }
 
 async function receivePayload(payload) {
+    if (payload.type === 'nuke') {
+        if (storageEngine) storageEngine.clearMessages();
+        alert("La discussion a été détruite par l'hôte.");
+        leaveSecureTunnel();
+        return;
+    }
+
     if (payload.type === 'msg' || payload.type === 'img') {
         const decryptedContent = await cryptoEngine.decrypt(payload.content);
         if (decryptedContent) {
@@ -585,6 +592,15 @@ async function receivePayload(payload) {
     } else if (payload.type === 'typing') {
         showTypingIndicator(payload.name);
     }
+}
+
+async function nukeSession() {
+    if (!confirm("Détruire définitivement cette discussion chez tous les participants ?")) return;
+    if (socket && socket.connected) {
+        socket.emit('send_encrypted_payload', { type: 'nuke', sender: currentAlias });
+    }
+    if (storageEngine) storageEngine.clearMessages();
+    leaveSecureTunnel();
 }
 
 function triggerPushNotification() {
@@ -1243,6 +1259,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (ticket) {
+        // Détecter si on est sur mobile Android pour proposer d'ouvrir l'app
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const appBanner = document.getElementById('android-app-banner');
+        const openAppBtn = document.getElementById('open-app-btn');
+        if (isAndroid && appBanner && openAppBtn) {
+            const intentUrl = `intent://join?ticket=${ticket}#Intent;scheme=myesther;package=com.myesther.app;end`;
+            openAppBtn.href = intentUrl;
+            appBanner.classList.remove('hidden');
+        }
+
         const decodedSecret = await parseEphemeralTicket(ticket);
         if (decodedSecret) {
             const s = document.getElementById('secret-input');
@@ -1273,4 +1299,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('mousemove', resetGhostTimer);
     document.addEventListener('touchstart', resetGhostTimer);
     resetGhostTimer();
+});
+
+// --- 11. MODE CAMOUFLAGE / FAUSSE CALCULATRICE ---
+let calcDisplayVal = '0';
+let calcExpVal = '';
+let calcClearOnNext = false;
+
+function enterPanicCalculator() {
+    document.getElementById('panic-calculator-modal')?.classList.remove('hidden');
+}
+
+function exitPanicCalculator() {
+    document.getElementById('panic-calculator-modal')?.classList.add('hidden');
+}
+
+function handlePanicClick() {
+    enterPanicCalculator();
+}
+
+function calcInput(key) {
+    const disp = document.getElementById('calc-display');
+    const exp = document.getElementById('calc-exp');
+    if (!disp) return;
+
+    if (key === 'C') {
+        calcDisplayVal = '0';
+        calcExpVal = '';
+        calcClearOnNext = false;
+    } else if (key === '±') {
+        if (calcDisplayVal.startsWith('-')) calcDisplayVal = calcDisplayVal.slice(1);
+        else if (calcDisplayVal !== '0') calcDisplayVal = '-' + calcDisplayVal;
+    } else if (key === '%') {
+        const v = parseFloat(calcDisplayVal) || 0;
+        calcDisplayVal = String(v / 100);
+    } else if (['+', '-', '×', '÷'].includes(key)) {
+        calcExpVal = `${calcDisplayVal} ${key} `;
+        calcClearOnNext = true;
+    } else if (key === '=') {
+        if (calcDisplayVal === '1234' || calcDisplayVal === '0000') {
+            exitPanicCalculator();
+            return;
+        }
+        if (calcExpVal) {
+            const parts = calcExpVal.trim().split(' ');
+            const n1 = parseFloat(parts[0]) || 0;
+            const op = parts[1];
+            const n2 = parseFloat(calcDisplayVal) || 0;
+            let res = n2;
+            if (op === '+') res = n1 + n2;
+            else if (op === '-') res = n1 - n2;
+            else if (op === '×') res = n1 * n2;
+            else if (op === '÷') res = n2 !== 0 ? n1 / n2 : 0;
+            
+            calcDisplayVal = String(Number.isInteger(res) ? res : res.toFixed(2));
+            calcExpVal = '';
+            calcClearOnNext = true;
+        }
+    } else {
+        if (calcDisplayVal === '0' || calcClearOnNext) {
+            calcDisplayVal = key;
+            calcClearOnNext = false;
+        } else {
+            calcDisplayVal += key;
+        }
+    }
+
+    disp.textContent = calcDisplayVal;
+    if (exp) exp.textContent = calcExpVal;
+}
+
+// Raccourci touche Échap pour basculer en mode calculatrice
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('panic-calculator-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+            exitPanicCalculator();
+        } else if (document.getElementById('chat-screen') && !document.getElementById('chat-screen').classList.contains('hidden')) {
+            enterPanicCalculator();
+        }
+    }
 });
