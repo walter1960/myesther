@@ -293,7 +293,7 @@ async function establishSecureTunnel() {
     const originalHTML = btn ? btn.innerHTML : '';
     const resetBtn = () => {
         if (btn) {
-            btn.innerHTML = originalHTML || "Établir le Tunnel Sécurisé";
+            btn.innerHTML = originalHTML || "Démarrer la discussion";
             btn.disabled = false;
         }
     };
@@ -312,12 +312,12 @@ async function establishSecureTunnel() {
 
         currentSecret = secretEl ? secretEl.value.trim() : "";
         currentAlias = (aliasEl ? aliasEl.value.trim() : "") || "Anonyme";
-        currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "MyEsther Group";
+        currentGroupName = (groupNameEl ? groupNameEl.value.trim() : "") || "Discussion Privée";
         currentTTL = groupTtlEl ? parseInt(groupTtlEl.value) : 0;
         const enableLobby = lobbyToggleEl ? lobbyToggleEl.checked : false;
         
         if (!currentSecret || currentSecret.length < 4) {
-            alert(" Sécurité : Veuillez entrer un secret d'au moins 4 caractères.");
+            alert("Veuillez entrer un mot de passe d'au moins 4 caractères.");
             resetBtn();
             return;
         }
@@ -337,7 +337,7 @@ async function establishSecureTunnel() {
 
         const connTimeout = setTimeout(() => {
             if (!socket.connected) {
-                alert("Délai de connexion dépassé. Vérifiez votre connexion.");
+                alert("Délai de connexion dépassé. Vérifiez votre connexion internet.");
                 resetBtn();
                 socket.disconnect();
             }
@@ -369,7 +369,7 @@ async function establishSecureTunnel() {
 
         // Gestion de la salle d'attente (Lobby)
         socket.on('knock_waiting', (data) => {
-            if (btn) btn.innerHTML = `<span> ${data.status}</span>`;
+            if (btn) btn.innerHTML = `<span>En attente de l'autorisation de l'hôte...</span>`;
         });
 
         socket.on('knock_request', (data) => {
@@ -389,7 +389,7 @@ async function establishSecureTunnel() {
         });
 
         socket.on('knock_rejected', (data) => {
-            alert(data.status || "Accès refusé.");
+            alert(data.status || "Demande refusée.");
             resetBtn();
             leaveSecureTunnel();
         });
@@ -413,14 +413,14 @@ async function establishSecureTunnel() {
         socket.on('room_update', (data) => {
             const counter = document.getElementById('member-counter');
             if (counter) {
-                const label = (window.isEnglish ? "membres" : "membres");
+                const label = (window.isEnglish ? "members" : "membres");
                 counter.textContent = `${data.member_count} ${label}`;
             }
         });
 
     } catch (error) {
         console.error(" CRASH au démarrage:", error);
-        alert("Une erreur critique est survenue.");
+        alert("Une erreur inattendue est survenue.");
         resetBtn();
     }
 }
@@ -434,7 +434,7 @@ async function transitionToChatScreen() {
         // Welcome badge
         const badgeContainer = document.createElement('div');
         badgeContainer.className = 'flex justify-center mb-4 mt-2';
-        badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge"> Tunnel Sécurisé Établi</span>`;
+        badgeContainer.innerHTML = `<span class="text-[10px] font-black text-white uppercase tracking-widest bg-green-500/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm conn-badge"> En ligne (Privé)</span>`;
         canvas.appendChild(badgeContainer);
 
         // Typing indicator
@@ -445,7 +445,7 @@ async function transitionToChatScreen() {
         canvas.appendChild(typing);
         
         if (history.length === 0) {
-            appendMessage("Bonjour ! Vous êtes connecté(e) en toute sécurité. Les messages sont éphémères et chiffrés de bout en bout.", 'received', false, Date.now(), false, 'Système');
+            appendMessage("Bienvenue ! Vos messages disparaissent dès la fermeture de votre navigateur.", 'received', false, Date.now(), false, 'Système');
         }
     }
 
@@ -871,7 +871,7 @@ async function openShareModal() {
     if (!modal || !container) return;
 
     modal.classList.remove('hidden');
-    container.innerHTML = '<div style="color:#9ca3af;font-size:12px;">Génération du ticket chiffré...</div>';
+    container.innerHTML = '<div style="color:#9ca3af;font-size:12px;">Génération du code d\'invitation...</div>';
 
     lastGeneratedTicket = await createEphemeralTicket(currentSecret, 15);
     const deepLink = `myesther://join?ticket=${lastGeneratedTicket}`;
@@ -895,13 +895,13 @@ async function copySecureSessionLink() {
     if (navigator.clipboard) {
         navigator.clipboard.writeText(shareUrl).then(() => {
             const btnText = document.getElementById('copy-btn-text');
-            if (btnText) btnText.textContent = " Ticket chiffré copié (Zéro mot de passe en clair) !";
+            if (btnText) btnText.textContent = "Lien d'invitation copié !";
             setTimeout(() => {
-                if (btnText) btnText.textContent = "Copier le Lien Sécurisé";
+                if (btnText) btnText.textContent = "Copier le Lien d'Invitation";
             }, 2500);
         });
     } else {
-        alert("Lien Sécurisé : " + shareUrl);
+        alert("Lien d'invitation : " + shareUrl);
     }
 }
 
@@ -1247,9 +1247,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (decodedSecret) {
             const s = document.getElementById('secret-input');
             if (s) s.value = decodedSecret;
-            showEphemeralToast("Ticket d'invitation chiffré déverrouillé !", "success");
+            showEphemeralToast("Invitation acceptée avec succès !", "success");
         } else {
-            showEphemeralToast("Ticket d'invitation expiré ou invalide.", "error");
+            showEphemeralToast("Le lien d'invitation a expiré ou est invalide.", "error");
         }
     } else if (params.has('secret')) {
         const s = document.getElementById('secret-input');
