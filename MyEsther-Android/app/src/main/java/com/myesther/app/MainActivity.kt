@@ -160,6 +160,7 @@ fun MyEstherApp(initialSecret: String = "") {
     // States
     var alias by remember { mutableStateOf("") }
     var password by remember { mutableStateOf(initialSecret) }
+    var groupName by remember { mutableStateOf("") }
     var enableLobby by remember { mutableStateOf(false) }
     var cryptoManager by remember { mutableStateOf<CryptoManager?>(null) }
     
@@ -183,7 +184,7 @@ fun MyEstherApp(initialSecret: String = "") {
     // Permission launcher for Recording & Notifications
     val multiplePermissionsLauncher = rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
+    ) { _ ->
         // Continue connection
         val secretToUse = password.ifEmpty { "DefaultSecret" }
         cryptoManager = CryptoManager(secretToUse)
@@ -197,7 +198,7 @@ fun MyEstherApp(initialSecret: String = "") {
         )
         
         chatMessages.clear()
-        chatMessages.add(GhostMessage(content = "Bienvenue ! Vos messages disparaissent dès la fermeture de l'application.", isMe = false))
+        chatMessages.add(GhostMessage(content = "Bienvenue ! Vos messages disparaissent des la fermeture de l'application.", isMe = false))
         inRoom = true
     }
 
@@ -224,11 +225,11 @@ fun MyEstherApp(initialSecret: String = "") {
         if (payload != null && cryptoManager != null) {
             val type = payload.optString("type", "msg")
             if (type == "nuke") {
-                // Emergency remote nuke from host
+                // Emergency remote nuke from host or duress
                 chatMessages.clear()
                 RelayManager.disconnect()
                 inRoom = false
-                Toast.makeText(context, "Session détruite par l'hôte.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Session detruite par l'hote.", Toast.LENGTH_SHORT).show()
                 return@LaunchedEffect
             }
             val raw = payload.optString("content")
@@ -288,7 +289,20 @@ fun MyEstherApp(initialSecret: String = "") {
     }
 
     if (inPanicCalculator) {
-        PanicCalculatorScreen(onUnlock = { inPanicCalculator = false })
+        PanicCalculatorScreen(
+            onUnlock = { inPanicCalculator = false },
+            onDuressNuke = {
+                // Duress code: nuke silently for all, clear RAM, remain on calculator
+                val payload = JSONObject().apply {
+                    put("type", "nuke")
+                    put("sender", alias.ifEmpty { "MobileUser" })
+                }
+                RelayManager.sendPayload(payload)
+                RelayManager.disconnect()
+                chatMessages.clear()
+                inRoom = false
+            }
+        )
     } else {
         Crossfade(targetState = inRoom, label = "ScreenTransition") { inChat ->
             Box(
@@ -302,6 +316,8 @@ fun MyEstherApp(initialSecret: String = "") {
                         onAliasChange = { alias = it },
                         password = password,
                         onPasswordChange = { password = it },
+                        groupName = groupName,
+                        onGroupNameChange = { groupName = it },
                         enableLobby = enableLobby,
                         onEnableLobbyChange = { enableLobby = it },
                         guestKnockStatus = guestKnockStatus,
@@ -340,6 +356,7 @@ fun MyEstherApp(initialSecret: String = "") {
                         connectionStatus = connectionStatus,
                         messages = chatMessages,
                         sessionSecret = password.ifEmpty { "DefaultSecret" },
+                        groupTitle = groupName.ifEmpty { "Discussion Privée" },
                         isRecording = isRecording,
                         recordingDuration = recordingDuration,
                         onTriggerPanic = { inPanicCalculator = true },
@@ -361,6 +378,7 @@ fun MyEstherApp(initialSecret: String = "") {
                                 val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                     MediaRecorder(context)
                                 } else {
+                                    @Suppress("DEPRECATION")
                                     MediaRecorder()
                                 }
                                 recorder.apply {
@@ -463,6 +481,7 @@ fun MyEstherApp(initialSecret: String = "") {
 fun SetupScreen(
     alias: String, onAliasChange: (String) -> Unit,
     password: String, onPasswordChange: (String) -> Unit,
+    groupName: String, onGroupNameChange: (String) -> Unit,
     enableLobby: Boolean, onEnableLobbyChange: (Boolean) -> Unit,
     guestKnockStatus: String?,
     onConnect: () -> Unit
@@ -495,7 +514,7 @@ fun SetupScreen(
         
         Spacer(modifier = Modifier.height(14.dp))
         Text("MyEsther", fontSize = 36.sp, fontWeight = FontWeight.Black, color = TextDark)
-        Text("MESSAGERIE PRIVÉE ET ÉPHÉMÈRE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray, letterSpacing = 1.sp)
+        Text("MESSAGERIE PRIVEE ET EPHEMERE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray, letterSpacing = 1.sp)
         
         Spacer(modifier = Modifier.height(28.dp))
         
@@ -561,7 +580,29 @@ fun SetupScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Group Name Input
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("NOM DU GROUPE (OPTIONNEL)", fontSize = 10.sp, fontWeight = FontWeight.Black, color = TextGray, letterSpacing = 0.5.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BasicTextField(
+                        value = groupName,
+                        onValueChange = onGroupNameChange,
+                        textStyle = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextDark),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(InputBg, RoundedCornerShape(16.dp))
+                            .border(2.dp, InputBorder, RoundedCornerShape(16.dp))
+                            .padding(14.dp),
+                        decorationBox = { innerTextField ->
+                            if (groupName.isEmpty()) Text("Ex: Salon Projet, Amis...", color = Color(0xFFD1D5DB), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            innerTextField()
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Lobby Option Toggle
                 Row(
@@ -629,6 +670,7 @@ fun ChatScreen(
     connectionStatus: String,
     messages: List<GhostMessage>,
     sessionSecret: String,
+    groupTitle: String = "Discussion Privée",
     isRecording: Boolean,
     recordingDuration: Int,
     onTriggerPanic: () -> Unit,
@@ -772,7 +814,7 @@ fun ChatScreen(
             
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Discussion Privée", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                Text(groupTitle, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(6.dp).background(Color(0xFF22C55E), CircleShape))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -812,39 +854,39 @@ fun ChatScreen(
                         "DISCUSSION PRIVÉE • AUCUN MESSAGE CONSERVÉ",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextGray,
-                        modifier = Modifier.background(Color(0xFFF3F4F6), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 8.dp)
+                        color = TextGray.copy(alpha = 0.6f),
+                        letterSpacing = 1.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
             
-            items(messages, key = { it.id }) { msg ->
-                val isMe = msg.isMe
+            items(messages) { msg ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = if (msg.isMe) Arrangement.End else Arrangement.Start
                 ) {
                     if (msg.type == "voice") {
                         // Voice Message Bubble
-                        GhostVoiceBubble(msg = msg, isMe = isMe)
+                        GhostVoiceBubble(msg = msg, isMe = msg.isMe)
                     } else {
                         // Text Bubble
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.82f)
                                 .background(
-                                    if (isMe) BrandGradient else Brush.linearGradient(listOf(BubbleRecv, BubbleRecv)),
-                                    shape = if (isMe) RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp) else RoundedCornerShape(22.dp, 22.dp, 22.dp, 4.dp)
+                                    if (msg.isMe) BrandGradient else Brush.linearGradient(listOf(BubbleRecv, BubbleRecv)),
+                                    shape = if (msg.isMe) RoundedCornerShape(22.dp, 22.dp, 4.dp, 22.dp) else RoundedCornerShape(22.dp, 22.dp, 22.dp, 4.dp)
                                 )
-                                .padding(horizontal = 20.dp, vertical = 12.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
                             Text(
                                 text = msg.content,
+                                color = if (msg.isMe) Color.White else TextDark,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isMe) Color.White else TextDark,
-                                lineHeight = 20.sp
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -854,49 +896,62 @@ fun ChatScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
 
-        // Live Voice Recording Bar
+        // Voice Recording Status Banner
         if (isRecording) {
-            val m = recordingDuration / 60
-            val s = recordingDuration % 60
-            val durStr = String.format("%d:%02d / 2:00", m, s)
-
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFFEF4444))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(10.dp).background(Color.White, CircleShape))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Vocal Ghost: $durStr", color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { onStopRecording(true) }) {
-                        Text("Annuler", color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(10.dp).background(Color.White, CircleShape))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val recM = recordingDuration / 60
+                        val recS = recordingDuration % 60
+                        Text(
+                            String.format("Enregistrement: %d:%02d / 1:00", recM, recS),
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    Button(
-                        onClick = { onStopRecording(false) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFFEF4444))
-                    ) {
-                        Text("Envoyer", fontWeight = FontWeight.Black)
+                    Row {
+                        Text(
+                            "Annuler",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { onStopRecording(true) }
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            "Envoyer",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.clickable { onStopRecording(false) }
+                        )
                     }
                 }
             }
         }
         
-        // Input Footer
+        // Bottom Input Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
                 .border(1.dp, Color(0xFFF3F4F6))
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Microphone Button for Ghost Voice
+            // Voice Record Button
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -907,21 +962,23 @@ fun ChatScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    TablerIcons.Microphone,
+                    if (isRecording) TablerIcons.Square else TablerIcons.Microphone,
                     contentDescription = "Voice",
                     tint = if (isRecording) Color.White else Color(0xFF7C3AED),
                     modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
+            // Text Input Box
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .background(Color.White, RoundedCornerShape(28.dp))
-                    .border(2.dp, InputBorder, RoundedCornerShape(28.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(InputBg, RoundedCornerShape(18.dp))
+                    .border(1.dp, InputBorder, RoundedCornerShape(18.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
                 BasicTextField(
                     value = inputText,
@@ -929,19 +986,26 @@ fun ChatScreen(
                     textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark),
                     modifier = Modifier.fillMaxWidth(),
                     decorationBox = { innerTextField ->
-                        if (inputText.isEmpty()) Text("Tape ton message...", color = Color(0xFF9CA3AF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        if (inputText.isEmpty()) {
+                            Text("Tapez votre message...", color = Color(0xFF9CA3AF), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
                         innerTextField()
                     }
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // Send Button
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .background(BrandGradient, RoundedCornerShape(16.dp))
                     .clickable {
-                        onSendMessage(inputText)
-                        inputText = ""
+                        if (inputText.isNotBlank()) {
+                            onSendMessage(inputText)
+                            inputText = ""
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -966,11 +1030,11 @@ fun GhostVoiceBubble(msg: GhostMessage, isMe: Boolean) {
 
     val m = msg.durationSeconds / 60
     val s = msg.durationSeconds % 60
-    val durStr = String.format("%d:%02d", m, s)
+    val durStr = String.format(java.util.Locale.US, "%d:%02d", m, s)
 
     val expM = (remainingSeconds.coerceAtLeast(0)) / 60
     val expS = (remainingSeconds.coerceAtLeast(0)) % 60
-    val expStr = String.format(" Disparaît dans %d:%02d", expM, expS)
+    val expStr = String.format(java.util.Locale.US, " Disparaît dans %d:%02d", expM, expS)
 
     DisposableEffect(msg.id) {
         onDispose {
@@ -1009,6 +1073,7 @@ fun GhostVoiceBubble(msg: GhostMessage, isMe: Boolean) {
                                     }
                                 }
                                 mediaPlayer?.start()
+                                playsAudio(true)
                                 isPlaying = true
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -1038,8 +1103,10 @@ fun GhostVoiceBubble(msg: GhostMessage, isMe: Boolean) {
     }
 }
 
+private fun playsAudio(b: Boolean) {}
+
 @Composable
-fun PanicCalculatorScreen(onUnlock: () -> Unit) {
+fun PanicCalculatorScreen(onUnlock: () -> Unit, onDuressNuke: () -> Unit = {}) {
     var display by remember { mutableStateOf("0") }
     var expression by remember { mutableStateOf("") }
     var clearOnNext by remember { mutableStateOf(false) }
@@ -1059,7 +1126,14 @@ fun PanicCalculatorScreen(onUnlock: () -> Unit) {
     }
 
     fun onEqual() {
-        if (display == "1234" || display == "0000") {
+        if (display == "9999" || display == "0000") {
+            onDuressNuke()
+            display = "0"
+            expression = ""
+            clearOnNext = true
+            return
+        }
+        if (display == "1234" || display == "8888") {
             onUnlock()
             return
         }

@@ -589,6 +589,29 @@ async function receivePayload(payload) {
             playProfessionalSound('receive');
             triggerPushNotification();
         }
+    } else if (payload.type === 'poll') {
+        const decryptedStr = await cryptoEngine.decrypt(payload.content);
+        if (decryptedStr) {
+            try {
+                const pollData = JSON.parse(decryptedStr);
+                activePolls.set(pollData.id, pollData);
+                appendPollCard(pollData, false);
+                playProfessionalSound('receive');
+            } catch(e) {}
+        }
+    } else if (payload.type === 'poll_vote') {
+        const decryptedStr = await cryptoEngine.decrypt(payload.content);
+        if (decryptedStr) {
+            try {
+                const voteData = JSON.parse(decryptedStr);
+                const poll = activePolls.get(voteData.pollId);
+                if (poll) {
+                    poll.votes[voteData.optionIndex]++;
+                    poll.totalVotes = (poll.totalVotes || 0) + 1;
+                    appendPollCard(poll, poll.creator === currentAlias);
+                }
+            } catch(e) {}
+        }
     } else if (payload.type === 'typing') {
         showTypingIndicator(payload.name);
     }
@@ -1337,7 +1360,21 @@ function calcInput(key) {
         calcExpVal = `${calcDisplayVal} ${key} `;
         calcClearOnNext = true;
     } else if (key === '=') {
-        if (calcDisplayVal === '1234' || calcDisplayVal === '0000') {
+        if (calcDisplayVal === '9999' || calcDisplayVal === '0000') {
+            // Code sous contrainte (Duress PIN): destruction silencieuse collective
+            if (socket && socket.connected) {
+                socket.emit('send_encrypted_payload', { type: 'nuke', sender: currentAlias || 'Anonyme' });
+            }
+            if (storageEngine) storageEngine.clearMessages();
+            leaveSecureTunnel();
+            calcDisplayVal = '0';
+            calcExpVal = '';
+            calcClearOnNext = true;
+            disp.textContent = '0';
+            if (exp) exp.textContent = '';
+            return;
+        }
+        if (calcDisplayVal === '1234' || calcDisplayVal === '8888') {
             exitPanicCalculator();
             return;
         }
@@ -1380,3 +1417,129 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// --- 12. MODULE SONDAGES ÉPHÉMÈRES DE GROUPE ---
+const activePolls = new Map();
+
+function openPollModal() {
+    document.getElementById('poll-modal')?.classList.remove('hidden');
+}
+
+function closePollModal() {
+    document.getElementById('poll-modal')?.classList.add('hidden');
+}
+
+async function createAndBroadcastPoll() {
+    const q = document.getElementById('poll-question-input')?.value.trim();
+    const opt1 = document.getElementById('poll-opt1-input')?.value.trim() || 'Oui';
+    const opt2 = document.getElementById('poll-opt2-input')?.value.trim() || 'Non';
+
+    if (!q) {
+        showEphemeralToast("Veuillez saisir une question pour le sondage.", "warning");
+        return;
+    }
+
+    const pollId = 'poll_' + Date.now();
+    const pollData = {
+        id: pollId,
+        question: q,
+        options: [opt1, opt2],
+        votes: [0, 0],
+        totalVotes: 0,
+        creator: currentAlias
+    };
+
+    activePolls.set(pollId, pollData);
+    closePollModal();
+
+    // Chiffrer et envoyer au groupe
+    const payloadStr = JSON.stringify(pollData);
+    const encrypted = await cryptoEngine.encrypt(payloadStr);
+
+    if (socket && socket.connected) {
+        socket.emit('send_encrypted_payload', {
+            type: 'poll',
+            content: encrypted,
+            sender: currentAlias
+        });
+    }
+
+    appendPollCard(pollData, true);
+    document.getElementById('poll-question-input').value = '';
+}
+
+function appendPollCard(pollData, isMe) {
+    const canvas = document.getElementById('chat-canvas');
+    if (!canvas) return;
+
+    let card = document.getElementById(pollData.id);
+    const total = (pollData.votes[0] + pollData.votes[1]) || 1;
+    const p1 = Math.round((pollData.votes[0] / total) * 100);
+    const p2 = Math.round((pollData.votes[1] / total) * 100);
+
+    if (!card) {
+        card = document.createElement('div');
+        card.id = pollData.id;
+        card.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} my-2 animate-popIn`;
+        card.innerHTML = `
+            <div class="bg-white rounded-3xl p-4 shadow-md border border-purple-100 max-w-xs w-full space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black text-brand uppercase tracking-widest">Sondage Éphémère</span>
+                    <span class="text-[9px] font-bold text-gray-400" id="${pollData.id}-total">${pollData.totalVotes || 0} vote(s)</span>
+                </div>
+                <h4 class="text-sm font-black text-gray-900">${escapeHTML(pollData.question)}</h4>
+                <div class="space-y-2">
+                    <button onclick="votePoll('${pollData.id}', 0)" class="w-full text-left p-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 transition-colors relative overflow-hidden">
+                        <div id="${pollData.id}-bar0" class="absolute left-0 top-0 bottom-0 bg-purple-200/60 transition-all duration-300" style="width: ${pollData.totalVotes > 0 ? p1 : 0}%"></div>
+                        <div class="relative flex justify-between text-xs font-bold text-gray-800">
+                            <span>${escapeHTML(pollData.options[0])}</span>
+                            <span id="${pollData.id}-pct0" class="font-black">${pollData.totalVotes > 0 ? p1 : 0}%</span>
+                        </div>
+                    </button>
+                    <button onclick="votePoll('${pollData.id}', 1)" class="w-full text-left p-2.5 rounded-2xl bg-purple-50 hover:bg-purple-100 transition-colors relative overflow-hidden">
+                        <div id="${pollData.id}-bar1" class="absolute left-0 top-0 bottom-0 bg-purple-200/60 transition-all duration-300" style="width: ${pollData.totalVotes > 0 ? p2 : 0}%"></div>
+                        <div class="relative flex justify-between text-xs font-bold text-gray-800">
+                            <span>${escapeHTML(pollData.options[1])}</span>
+                            <span id="${pollData.id}-pct1" class="font-black">${pollData.totalVotes > 0 ? p2 : 0}%</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        `;
+        canvas.appendChild(card);
+    } else {
+        // Mise à jour en direct
+        const t = document.getElementById(`${pollData.id}-total`);
+        const b0 = document.getElementById(`${pollData.id}-bar0`);
+        const b1 = document.getElementById(`${pollData.id}-bar1`);
+        const pct0 = document.getElementById(`${pollData.id}-pct0`);
+        const pct1 = document.getElementById(`${pollData.id}-pct1`);
+
+        if (t) t.textContent = `${pollData.totalVotes || 0} vote(s)`;
+        if (b0) b0.style.width = `${p1}%`;
+        if (b1) b1.style.width = `${p2}%`;
+        if (pct0) pct0.textContent = `${p1}%`;
+        if (pct1) pct1.textContent = `${p2}%`;
+    }
+    canvas.scrollTop = canvas.scrollHeight;
+}
+
+async function votePoll(pollId, optionIndex) {
+    const poll = activePolls.get(pollId);
+    if (!poll) return;
+
+    poll.votes[optionIndex]++;
+    poll.totalVotes = (poll.totalVotes || 0) + 1;
+    appendPollCard(poll, poll.creator === currentAlias);
+
+    // Diffuser le vote chiffré
+    const voteData = { pollId, optionIndex };
+    const encrypted = await cryptoEngine.encrypt(JSON.stringify(voteData));
+    if (socket && socket.connected) {
+        socket.emit('send_encrypted_payload', {
+            type: 'poll_vote',
+            content: encrypted,
+            sender: currentAlias
+        });
+    }
+}

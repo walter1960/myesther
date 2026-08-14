@@ -489,12 +489,16 @@
       <!-- Boutons secondaires groupés -->
       <div class="flex gap-1 flex-shrink-0">
         <!-- Bouton image -->
-        <button onclick="document.getElementById('file-input').click()" class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center transition-all text-gray-500" title="Image">
+        <button onclick="document.getElementById('file-input').click()" class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center transition-all text-gray-500 hover:bg-gray-200" title="Image">
           <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
           <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleImageSelection(this)"/>
         </button>
+        <!-- Bouton Sondage Éphémère -->
+        <button onclick="openPollModal()" class="w-9 h-9 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand flex items-center justify-center transition-all" title="Sondage Éphémère">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+        </button>
         <!-- Bouton Vocal (Micro) -->
-        <button id="mic-btn" onclick="toggleVoiceRecording()" class="w-9 h-9 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand flex items-center justify-center transition-all" title="Message Vocal (Max 2min)">
+        <button id="mic-btn" onclick="toggleVoiceRecording()" class="w-9 h-9 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand flex items-center justify-center transition-all" title="Message Vocal (Max 1min)">
           <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15a3 3 0 01-3-3V4.5a3 3 0 116 0v7.5a3 3 0 01-3 3z" /></svg>
         </button>
       </div>
@@ -568,6 +572,31 @@
       <button onclick="rejectKnock()" class="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black rounded-xl text-xs transition-colors">Refuser</button>
       <button onclick="approveKnock()" class="flex-1 py-3 px-4 bg-brand hover:opacity-90 text-white font-black rounded-xl text-xs shadow-lg shadow-purple-300 transition-all">Accepter</button>
     </div>
+  </div>
+<!-- Modale Micro-Sondage Éphémère -->
+<div id="poll-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl text-left space-y-4 animate-popIn">
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-black text-gray-900">Sondage Éphémère</h3>
+      <button onclick="closePollModal()" class="text-gray-400 hover:text-gray-600 font-black text-sm">Fermer</button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Question</label>
+        <input id="poll-question-input" type="text" class="input-secret text-sm" placeholder="Ex: On valide l'opération ?" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Option A</label>
+        <input id="poll-opt1-input" type="text" class="input-secret text-sm" placeholder="Ex: Oui" />
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-gray-400 mb-1 uppercase tracking-widest">Option B</label>
+        <input id="poll-opt2-input" type="text" class="input-secret text-sm" placeholder="Ex: Non" />
+      </div>
+    </div>
+    <button onclick="createAndBroadcastPoll()" class="w-full py-3 bg-brand text-white text-xs font-black rounded-xl shadow-md hover:opacity-90 transition-opacity">
+      Publier le Sondage
+    </button>
   </div>
 </div>
 
