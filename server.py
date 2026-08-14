@@ -1,8 +1,19 @@
-import eventlet
-eventlet.monkey_patch()
 import os
 import hashlib
 import time
+
+try:
+    import gevent.monkey
+    gevent.monkey.patch_all()
+    async_mode = 'gevent'
+except Exception:
+    try:
+        import eventlet
+        eventlet.monkey_patch()
+        async_mode = 'eventlet'
+    except Exception:
+        async_mode = 'threading'
+
 try:
     import redis
 except ImportError:
