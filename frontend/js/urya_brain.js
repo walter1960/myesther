@@ -781,21 +781,104 @@ function appendVoiceMessage(audioDataUrl, type, duration = 0, timestamp = Date.n
     }, 1000);
 }
 
-// --- 8. QR CODE & PARTAGE DE LIEN SÉCURISÉ ---
+// --- 8. TICKETS ÉPHÉMÈRES ET QR CODE SÉCURISÉ ---
 
-function openShareModal() {
+async function deriveTicketKey() {
+    const enc = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+        "raw", enc.encode("MYESTHER_GHOST_TICKET_DERIVATION_KEY"), { name: "PBKDF2" }, false, ["deriveKey"]
+    );
+    return await window.crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: enc.encode("URYA_TICKET_MASTER_SALT_2026_ZERO_KNOWLEDGE"),
+            iterations: 40000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+async function createEphemeralTicket(secret, ttlMinutes = 15) {
+    try {
+        const key = await deriveTicketKey();
+        const payload = JSON.stringify({
+            s: secret,
+            exp: Date.now() + (ttlMinutes * 60 * 1000),
+            nonce: Math.random().toString(36).substring(2) + Date.now().toString(36),
+            v: 2
+        });
+        const enc = new TextEncoder();
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const cipherBuffer = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            enc.encode(payload)
+        );
+        const combined = new Uint8Array(iv.length + cipherBuffer.byteLength);
+        combined.set(iv, 0);
+        combined.set(new Uint8Array(cipherBuffer), iv.length);
+        
+        let binary = '';
+        for (let i = 0; i < combined.length; i++) binary += String.fromCharCode(combined[i]);
+        const base64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return "MYE2." + base64;
+    } catch(e) {
+        console.error("Ticket creation error", e);
+        return "";
+    }
+}
+
+async function parseEphemeralTicket(ticket) {
+    if (!ticket) return null;
+    if (!ticket.startsWith("MYE2.")) return ticket;
+    try {
+        const rawBase64 = ticket.substring(5).replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(rawBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        if (bytes.length < 12) return null;
+        
+        const iv = bytes.slice(0, 12);
+        const ciphertext = bytes.slice(12);
+        const key = await deriveTicketKey();
+        
+        const decryptedBuffer = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            ciphertext
+        );
+        const dec = new TextDecoder();
+        const json = JSON.parse(dec.decode(decryptedBuffer));
+        if (Date.now() > json.exp) {
+            return null; // Expired
+        }
+        return json.s;
+    } catch(e) {
+        console.error("Ticket decode error", e);
+        return null;
+    }
+}
+
+let lastGeneratedTicket = '';
+
+async function openShareModal() {
     const modal = document.getElementById('share-modal');
     const container = document.getElementById('qrcode-container');
     if (!modal || !container) return;
 
     modal.classList.remove('hidden');
-    container.innerHTML = '';
+    container.innerHTML = '<div style="color:#9ca3af;font-size:12px;">Génération du ticket chiffré...</div>';
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
+    lastGeneratedTicket = await createEphemeralTicket(currentSecret, 15);
+    const deepLink = `myesther://join?ticket=${lastGeneratedTicket}`;
     
-    // Génération QR Code Canvas
+    container.innerHTML = '';
     const canvas = document.createElement('canvas');
-    drawSimpleQRCode(canvas, shareUrl);
+    drawSimpleQRCode(canvas, deepLink);
     container.appendChild(canvas);
 }
 
@@ -803,20 +886,22 @@ function closeShareModal() {
     document.getElementById('share-modal')?.classList.add('hidden');
 }
 
-function copySecureSessionLink() {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
-    const deepLink = `myesther://join?secret=${encodeURIComponent(currentSecret)}&group=${encodeURIComponent(currentGroupName)}`;
+async function copySecureSessionLink() {
+    if (!lastGeneratedTicket) {
+        lastGeneratedTicket = await createEphemeralTicket(currentSecret, 15);
+    }
+    const shareUrl = `${window.location.origin}${window.location.pathname}#ticket=${lastGeneratedTicket}`;
     
     if (navigator.clipboard) {
         navigator.clipboard.writeText(shareUrl).then(() => {
             const btnText = document.getElementById('copy-btn-text');
-            if (btnText) btnText.textContent = " Lien copié dans le presse-papier !";
+            if (btnText) btnText.textContent = " Ticket chiffré copié (Zéro mot de passe en clair) !";
             setTimeout(() => {
                 if (btnText) btnText.textContent = "Copier le Lien Sécurisé";
             }, 2500);
         });
     } else {
-        alert("Lien : " + shareUrl);
+        alert("Lien Sécurisé : " + shareUrl);
     }
 }
 
@@ -1146,13 +1231,31 @@ function saveToHistory(secret) {
 }
 
 // Initialisation au chargement
-document.addEventListener('DOMContentLoaded', () => {
-    // Vérifier les paramètres d'URL (Deep link ou scan QR)
+document.addEventListener('DOMContentLoaded', async () => {
+    // Vérifier les tickets éphémères sécurisés dans le Hash ou Search
+    let ticket = '';
+    if (window.location.hash.includes('ticket=')) {
+        ticket = window.location.hash.split('ticket=')[1]?.split('&')[0];
+    }
     const params = new URLSearchParams(window.location.search);
-    if (params.has('secret')) {
+    if (!ticket && params.has('ticket')) {
+        ticket = params.get('ticket');
+    }
+
+    if (ticket) {
+        const decodedSecret = await parseEphemeralTicket(ticket);
+        if (decodedSecret) {
+            const s = document.getElementById('secret-input');
+            if (s) s.value = decodedSecret;
+            showEphemeralToast("Ticket d'invitation chiffré déverrouillé !", "success");
+        } else {
+            showEphemeralToast("Ticket d'invitation expiré ou invalide.", "error");
+        }
+    } else if (params.has('secret')) {
         const s = document.getElementById('secret-input');
         if (s) s.value = params.get('secret');
     }
+
     if (params.has('alias')) {
         const a = document.getElementById('alias-input');
         if (a) a.value = params.get('alias');
